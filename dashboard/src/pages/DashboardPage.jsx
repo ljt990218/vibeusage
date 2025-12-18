@@ -1,16 +1,38 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import { buildAuthUrl } from "../lib/auth-url.js";
+import { computeActiveStreakDays } from "../lib/activity-heatmap.js";
 import { getDefaultRange } from "../lib/date-range.js";
 import { DAILY_SORT_COLUMNS, sortDailyRows } from "../lib/daily.js";
 import { toDisplayNumber } from "../lib/format.js";
+import { useActivityHeatmap } from "../hooks/use-activity-heatmap.js";
 import { useUsageData } from "../hooks/use-usage-data.js";
-import { AppShell } from "../components/AppShell.jsx";
-import { AppWindow } from "../components/AppWindow.jsx";
-import { MatrixRain } from "../components/MatrixRain.jsx";
 import { Sparkline } from "../components/Sparkline.jsx";
+import { AsciiBox } from "../ui/matrix-a/components/AsciiBox.jsx";
+import { ActivityHeatmap } from "../ui/matrix-a/components/ActivityHeatmap.jsx";
+import { BootScreen } from "../ui/matrix-a/components/BootScreen.jsx";
+import { DataRow } from "../ui/matrix-a/components/DataRow.jsx";
+import { IdentityPanel } from "../ui/matrix-a/components/IdentityPanel.jsx";
+import { MatrixButton } from "../ui/matrix-a/components/MatrixButton.jsx";
+import { MatrixInput } from "../ui/matrix-a/components/MatrixInput.jsx";
+import { MatrixShell } from "../ui/matrix-a/layout/MatrixShell.jsx";
 
 export function DashboardPage({ baseUrl, auth, signedIn, signOut }) {
+  const [booted, setBooted] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setBooted(true), 900);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  const [time, setTime] = useState(() => new Date().toLocaleTimeString());
+  useEffect(() => {
+    const t = window.setInterval(
+      () => setTime(new Date().toLocaleTimeString()),
+      1000
+    );
+    return () => window.clearInterval(t);
+  }, []);
+
   const defaultRange = useMemo(() => getDefaultRange(), []);
   const [from, setFrom] = useState(defaultRange.from);
   const [to, setTo] = useState(defaultRange.to);
@@ -20,6 +42,16 @@ export function DashboardPage({ baseUrl, auth, signedIn, signOut }) {
     accessToken: auth?.accessToken || null,
     from,
     to,
+  });
+
+  const {
+    range: heatmapRange,
+    daily: heatmapDaily,
+    heatmap,
+  } = useActivityHeatmap({
+    baseUrl,
+    accessToken: auth?.accessToken || null,
+    weeks: 52,
   });
 
   const [sort, setSort] = useState(() => ({ key: "day", dir: "desc" }));
@@ -46,6 +78,11 @@ export function DashboardPage({ baseUrl, auth, signedIn, signOut }) {
     return sort.dir === "asc" ? "^" : "v";
   }
 
+  const streakDays = useMemo(() => {
+    if (!signedIn) return 0;
+    return computeActiveStreakDays({ dailyRows: heatmapDaily, to: heatmapRange.to });
+  }, [signedIn, heatmapDaily, heatmapRange.to]);
+
   const isLocalhost = useMemo(() => {
     const h = window.location.hostname;
     return h === "localhost" || h === "127.0.0.1";
@@ -67,159 +104,231 @@ export function DashboardPage({ baseUrl, auth, signedIn, signOut }) {
     [baseUrl, redirectUrl]
   );
 
-  const headerRight = signedIn ? (
-    <div className="row" style={{ justifyContent: "flex-end" }}>
-      <span className="muted">{auth?.email ? auth.email : "Signed in"}</span>
-      <button className="btn" onClick={signOut}>
-        Sign out
-      </button>
+  const headerRight = (
+    <div className="flex items-center gap-4">
+      <div className="hidden sm:flex text-[#00FF41] font-bold bg-[#00FF41]/5 px-3 py-1 border border-[#00FF41]/20 items-center space-x-4">
+        <span className="opacity-40 font-normal uppercase text-[8px]">
+          Session_Time:
+        </span>
+        <span className="text-white tracking-widest">{time}</span>
+      </div>
+
+      {signedIn ? (
+        <>
+          <span className="hidden md:block text-[10px] opacity-60 max-w-[240px] truncate">
+            {auth?.email || auth?.name || "Signed in"}
+          </span>
+          <MatrixButton onClick={signOut}>Sign out</MatrixButton>
+        </>
+      ) : (
+        <span className="text-[10px] opacity-60">Not signed in</span>
+      )}
     </div>
-  ) : (
-    <span className="muted">Not signed in</span>
   );
+
+  if (!booted) {
+    return <BootScreen onSkip={() => setBooted(true)} />;
+  }
 
   return (
-    <AppShell
-      title="VibeScore"
-      background={<MatrixRain />}
-      right={headerRight}
-      footer={
-        signedIn ? "UTC aggregates • click Refresh to reload" : "Sign in to view UTC token aggregates"
+    <MatrixShell
+      headerRight={headerRight}
+      footerLeft={
+        signedIn ? <span>UTC aggregates • click Refresh to reload</span> : <span>Sign in to view usage</span>
       }
+      footerRight={<span className="font-bold">VibeScore_Dashboard</span>}
     >
       {!signedIn ? (
-        <AppWindow title="Auth required">
-          <p className="muted" style={{ marginTop: 0 }}>
-            Sign in / sign up to view your daily token usage (UTC).
-          </p>
-
-          <div className="row" style={{ marginTop: 12 }}>
-            <a className="btn primary" href={signInUrl}>
-              $ sign-in
-            </a>
-            <a className="btn" href={signUpUrl}>
-              $ sign-up
-            </a>
-          </div>
-        </AppWindow>
-      ) : (
-        <>
-          <AppWindow title="Install">
-            <p className="muted" style={{ marginTop: 0 }}>
-              1) run <code>{installInitCmd}</code>
-              <br />
-              2) use Codex CLI normally
-              <br />
-              3) run <code>{installSyncCmd}</code> (or wait for auto sync)
+        <div className="flex items-center justify-center">
+          <AsciiBox
+            title="Auth_Required"
+            subtitle="Matrix_UI_A"
+            className="w-full max-w-2xl"
+          >
+            <p className="text-[10px] opacity-50 mt-0">
+              Sign in / sign up to view your daily token usage (UTC).
             </p>
-          </AppWindow>
 
-          <AppWindow title="Query" right={<span className="muted">UTC</span>}>
-            <div className="row">
-              <label className="muted">
-                From&nbsp;
-                <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-              </label>
-              <label className="muted">
-                To&nbsp;
-                <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-              </label>
-              <button className="btn primary" disabled={loading} onClick={refresh}>
-                {loading ? "Loading…" : "Refresh"}
-              </button>
-              <div className="spacer" />
-              <span className="muted">{baseUrl.replace(/^https?:\/\//, "")}</span>
+            <div className="flex flex-wrap gap-3 mt-4">
+              <MatrixButton as="a" primary href={signInUrl}>
+                $ sign-in
+              </MatrixButton>
+              <MatrixButton as="a" href={signUpUrl}>
+                $ sign-up
+              </MatrixButton>
             </div>
+          </AsciiBox>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-4 flex flex-col gap-6">
+            <AsciiBox title="Architect_Identity" subtitle="Authorized">
+              <IdentityPanel auth={auth} streakDays={streakDays} rankLabel="—" />
+            </AsciiBox>
 
-            {error ? (
-              <div className="muted" style={{ marginTop: 12, color: "var(--error)" }}>
-                Error: {error}
-              </div>
-            ) : null}
-          </AppWindow>
+            <AsciiBox title="Install" subtitle="CLI">
+              <p className="text-[10px] opacity-50 mt-0">
+                1) run{" "}
+                <code className="px-1 py-0.5 bg-black/40 border border-[#00FF41]/20">
+                  {installInitCmd}
+                </code>
+                <br />
+                2) use Codex CLI normally
+                <br />
+                3) run{" "}
+                <code className="px-1 py-0.5 bg-black/40 border border-[#00FF41]/20">
+                  {installSyncCmd}
+                </code>{" "}
+                (or wait for auto sync)
+              </p>
+            </AsciiBox>
 
-          <AppWindow title="Metrics">
-            <div className="grid">
-              <div className="metric">
-                <div className="label">Total</div>
-                <div className="value">{toDisplayNumber(summary?.total_tokens)}</div>
-              </div>
-              <div className="metric">
-                <div className="label">Input</div>
-                <div className="value">{toDisplayNumber(summary?.input_tokens)}</div>
-              </div>
-              <div className="metric">
-                <div className="label">Output</div>
-                <div className="value">{toDisplayNumber(summary?.output_tokens)}</div>
-              </div>
-              <div className="metric">
-                <div className="label">Cached input</div>
-                <div className="value">{toDisplayNumber(summary?.cached_input_tokens)}</div>
-              </div>
-              <div className="metric">
-                <div className="label">Reasoning output</div>
-                <div className="value">{toDisplayNumber(summary?.reasoning_output_tokens)}</div>
-              </div>
-            </div>
-          </AppWindow>
+            <AsciiBox title="Query" subtitle="UTC">
+              <div className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <MatrixInput
+                    label="From"
+                    type="date"
+                    value={from}
+                    onChange={(e) => setFrom(e.target.value)}
+                  />
+                  <MatrixInput
+                    label="To"
+                    type="date"
+                    value={to}
+                    onChange={(e) => setTo(e.target.value)}
+                  />
+                </div>
 
-          <AppWindow title="Sparkline">
-            <Sparkline rows={sparklineRows} />
-          </AppWindow>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <MatrixButton primary disabled={loading} onClick={refresh}>
+                    {loading ? "Loading…" : "Refresh"}
+                  </MatrixButton>
+                  <span className="text-[9px] opacity-40 font-mono">
+                    {baseUrl.replace(/^https?:\/\//, "")}
+                  </span>
+                </div>
 
-          <AppWindow title="Daily totals">
-            {daily.length === 0 ? (
-              <div className="muted">
-                No data yet. Use Codex CLI then run <code>{installSyncCmd}</code>.
+                {error ? (
+                  <div className="text-[10px] text-red-400/90">
+                    Error: {error}
+                  </div>
+                ) : null}
               </div>
-            ) : (
-              <div
-                className="tui-table-scroll"
-                role="region"
-                aria-label="Daily totals table"
-                tabIndex={0}
-              >
-                <table>
-                  <thead>
-                    <tr>
-                      {DAILY_SORT_COLUMNS.map((c) => (
-                        <th key={c.key} aria-sort={ariaSortFor(c.key)}>
-                          <button
-                            type="button"
-                            className="tui-th-btn"
-                            onClick={() => toggleSort(c.key)}
-                            title={c.title}
+            </AsciiBox>
+
+            <AsciiBox title="Metrics" subtitle="Totals">
+              <div className="space-y-0.5">
+                <DataRow
+                  label="TOTAL"
+                  value={toDisplayNumber(summary?.total_tokens)}
+                  valueClassName="text-white"
+                />
+                <DataRow label="INPUT" value={toDisplayNumber(summary?.input_tokens)} />
+                <DataRow label="OUTPUT" value={toDisplayNumber(summary?.output_tokens)} />
+                <DataRow
+                  label="CACHED_INPUT"
+                  value={toDisplayNumber(summary?.cached_input_tokens)}
+                />
+                <DataRow
+                  label="REASONING_OUTPUT"
+                  value={toDisplayNumber(summary?.reasoning_output_tokens)}
+                />
+              </div>
+            </AsciiBox>
+          </div>
+
+          <div className="lg:col-span-8 flex flex-col gap-6">
+            <AsciiBox
+              title="Activity_Matrix"
+              subtitle={signedIn ? "52W_UTC" : "—"}
+            >
+              <ActivityHeatmap heatmap={heatmap} />
+              <div className="mt-3 text-[8px] opacity-30 uppercase tracking-widest font-black">
+                Range: {heatmapRange.from}..{heatmapRange.to}
+              </div>
+            </AsciiBox>
+
+            <AsciiBox title="Sparkline" subtitle={`${from}..${to}`}>
+              <Sparkline rows={sparklineRows} />
+            </AsciiBox>
+
+            <AsciiBox title="Daily_Totals" subtitle="Sortable">
+              {daily.length === 0 ? (
+                <div className="text-[10px] opacity-40">
+                  No data yet. Use Codex CLI then run{" "}
+                  <code className="px-1 py-0.5 bg-black/40 border border-[#00FF41]/20">
+                    {installSyncCmd}
+                  </code>
+                  .
+                </div>
+              ) : (
+                <div
+                  className="overflow-auto max-h-[520px] border border-[#00FF41]/10"
+                  role="region"
+                  aria-label="Daily totals table"
+                  tabIndex={0}
+                >
+                  <table className="w-full border-collapse">
+                    <thead className="sticky top-0 bg-black/90 backdrop-blur">
+                      <tr className="border-b border-[#00FF41]/10">
+                        {DAILY_SORT_COLUMNS.map((c) => (
+                          <th
+                            key={c.key}
+                            aria-sort={ariaSortFor(c.key)}
+                            className="text-left p-0"
                           >
-                            {c.label}{" "}
-                            <span
-                              className={`tui-sort-indicator ${sort.key === c.key ? "active" : ""}`}
+                            <button
+                              type="button"
+                              onClick={() => toggleSort(c.key)}
+                              title={c.title}
+                              className="w-full px-3 py-2 text-[9px] uppercase tracking-widest font-black opacity-70 hover:opacity-100 hover:bg-[#00FF41]/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FF41]/30"
                             >
-                              {sortIconFor(c.key)}
-                            </span>
-                          </button>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedDaily.map((r) => (
-                      <tr key={String(r.day)}>
-                        <td>{String(r.day)}</td>
-                        <td>{toDisplayNumber(r.total_tokens)}</td>
-                        <td>{toDisplayNumber(r.input_tokens)}</td>
-                        <td>{toDisplayNumber(r.output_tokens)}</td>
-                        <td>{toDisplayNumber(r.cached_input_tokens)}</td>
-                        <td>{toDisplayNumber(r.reasoning_output_tokens)}</td>
+                              <span className="inline-flex items-center gap-2">
+                                <span>{c.label}</span>
+                                <span className="opacity-40">
+                                  {sortIconFor(c.key)}
+                                </span>
+                              </span>
+                            </button>
+                          </th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </AppWindow>
-        </>
+                    </thead>
+                    <tbody>
+                      {sortedDaily.map((r) => (
+                        <tr
+                          key={String(r.day)}
+                          className="border-b border-[#00FF41]/5 hover:bg-[#00FF41]/5"
+                        >
+                          <td className="px-3 py-2 text-[10px] opacity-80 font-mono">
+                            {String(r.day)}
+                          </td>
+                          <td className="px-3 py-2 text-[10px] font-mono">
+                            {toDisplayNumber(r.total_tokens)}
+                          </td>
+                          <td className="px-3 py-2 text-[10px] font-mono">
+                            {toDisplayNumber(r.input_tokens)}
+                          </td>
+                          <td className="px-3 py-2 text-[10px] font-mono">
+                            {toDisplayNumber(r.output_tokens)}
+                          </td>
+                          <td className="px-3 py-2 text-[10px] font-mono">
+                            {toDisplayNumber(r.cached_input_tokens)}
+                          </td>
+                          <td className="px-3 py-2 text-[10px] font-mono">
+                            {toDisplayNumber(r.reasoning_output_tokens)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </AsciiBox>
+          </div>
+        </div>
       )}
-    </AppShell>
+    </MatrixShell>
   );
 }
-

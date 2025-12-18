@@ -1,9 +1,9 @@
 import React, { useMemo } from "react";
 
 import { buildAuthUrl } from "../lib/auth-url.js";
-import { AppShell } from "../components/AppShell.jsx";
-import { AppWindow } from "../components/AppWindow.jsx";
-import { MatrixRain } from "../components/MatrixRain.jsx";
+import { AsciiBox } from "../ui/matrix-a/components/AsciiBox.jsx";
+import { MatrixButton } from "../ui/matrix-a/components/MatrixButton.jsx";
+import { MatrixShell } from "../ui/matrix-a/layout/MatrixShell.jsx";
 
 export function ConnectCliPage({ defaultInsforgeBaseUrl }) {
   const url = useMemo(() => new URL(window.location.href), []);
@@ -43,35 +43,42 @@ export function ConnectCliPage({ defaultInsforgeBaseUrl }) {
   }, [insforgeBaseUrl, safeRedirect]);
 
   return (
-    <AppShell
-      title="VibeScore"
-      background={<MatrixRain />}
-      right={<span className="muted">Connect CLI</span>}
-      footer="Click sign-in/sign-up. On success, your browser returns to the local CLI callback."
+    <MatrixShell
+      headerRight={<span className="text-[10px] opacity-60">Connect_CLI</span>}
+      footerLeft={
+        <span>
+          Click sign-in/sign-up • browser returns to local CLI callback
+        </span>
+      }
+      footerRight={<span className="font-bold">/connect</span>}
     >
-      <AppWindow title="Link your CLI">
-        <p className="muted" style={{ marginTop: 0 }}>
-          Sign in or sign up. When finished, the browser will return to your local
-          CLI to complete setup.
-        </p>
+      <div className="flex items-center justify-center">
+        <AsciiBox title="Link_Your_CLI" subtitle="Local_Callback" className="w-full max-w-2xl">
+          <p className="text-[10px] opacity-50 mt-0">
+            Sign in or sign up. When finished, the browser will return to your local
+            CLI to complete setup.
+          </p>
 
-        {!safeRedirect ? (
-          <div className="muted" style={{ marginTop: 12, color: "var(--error)" }}>
-            Invalid or missing <code>redirect</code> URL. This page must be opened
-            from the CLI.
-          </div>
-        ) : (
-          <div className="row" style={{ marginTop: 12 }}>
-            <a className="btn primary" href={signInUrl}>
-              $ sign-in
-            </a>
-            <a className="btn" href={signUpUrl}>
-              $ sign-up
-            </a>
-          </div>
-        )}
-      </AppWindow>
-    </AppShell>
+          {!safeRedirect ? (
+            <div className="mt-4 text-[10px] text-red-400/90">
+              Invalid or missing{" "}
+              <code className="px-1 py-0.5 bg-black/40 border border-[#00FF41]/20">
+                redirect
+              </code>{" "}
+              URL. This page must be opened from the CLI.
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-3 mt-4">
+              <MatrixButton as="a" primary href={signInUrl}>
+                $ sign-in
+              </MatrixButton>
+              <MatrixButton as="a" href={signUpUrl}>
+                $ sign-up
+              </MatrixButton>
+            </div>
+          )}
+        </AsciiBox>
+      </div>
+    </MatrixShell>
   );
 }
-

@@ -37,14 +37,13 @@ export function Sparkline({ rows }) {
       aria-label="Daily token usage sparkline"
     >
       <path
-        className="tui-sparkline"
+        className="drop-shadow-[0_0_10px_rgba(0,255,65,0.22)]"
         d={d}
         fill="none"
-        stroke="var(--accent)"
+        stroke="#00FF41"
         strokeWidth="2.5"
         vectorEffect="non-scaling-stroke"
       />
     </svg>
   );
 }
-

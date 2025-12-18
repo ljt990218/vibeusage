@@ -126,6 +126,11 @@ export function MatrixRain() {
     };
   }, []);
 
-  return <canvas ref={ref} className="tui-matrix" aria-hidden="true" />;
+  return (
+    <canvas
+      ref={ref}
+      className="fixed inset-0 w-screen h-screen pointer-events-none opacity-[0.14] z-0"
+      aria-hidden="true"
+    />
+  );
 }
-
