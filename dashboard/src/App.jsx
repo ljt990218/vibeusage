@@ -1,18 +1,29 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
-const STORAGE_KEY = 'vibescore.dashboard.auth.v1';
+const STORAGE_KEY = "vibescore.dashboard.auth.v1";
 
 const DAILY_SORT_COLUMNS = [
-  { key: 'day', label: 'Date', title: 'Sort by Date' },
-  { key: 'total_tokens', label: 'Total', title: 'Sort by Total' },
-  { key: 'input_tokens', label: 'Input', title: 'Sort by Input' },
-  { key: 'output_tokens', label: 'Output', title: 'Sort by Output' },
-  { key: 'cached_input_tokens', label: 'Cached', title: 'Sort by Cached input' },
-  { key: 'reasoning_output_tokens', label: 'Reasoning', title: 'Sort by Reasoning output' }
+  { key: "day", label: "Date", title: "Sort by Date" },
+  { key: "total_tokens", label: "Total", title: "Sort by Total" },
+  { key: "input_tokens", label: "Input", title: "Sort by Input" },
+  { key: "output_tokens", label: "Output", title: "Sort by Output" },
+  {
+    key: "cached_input_tokens",
+    label: "Cached",
+    title: "Sort by Cached input",
+  },
+  {
+    key: "reasoning_output_tokens",
+    label: "Reasoning",
+    title: "Sort by Reasoning output",
+  },
 ];
 
 function getInsforgeBaseUrl() {
-  return import.meta.env.VITE_VIBESCORE_INSFORGE_BASE_URL || 'https://5tmappuk.us-east.insforge.app';
+  return (
+    import.meta.env.VITE_VIBESCORE_INSFORGE_BASE_URL ||
+    "https://5tmappuk.us-east.insforge.app"
+  );
 }
 
 function loadAuth() {
@@ -20,7 +31,11 @@ function loadAuth() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (typeof parsed?.accessToken !== 'string' || parsed.accessToken.length === 0) return null;
+    if (
+      typeof parsed?.accessToken !== "string" ||
+      parsed.accessToken.length === 0
+    )
+      return null;
     return parsed;
   } catch (_e) {
     return null;
@@ -36,28 +51,38 @@ function clearAuth() {
 }
 
 function formatDateUTC(d) {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())).toISOString().slice(0, 10);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
+    .toISOString()
+    .slice(0, 10);
 }
 
 function getDefaultRange() {
   const today = new Date();
   const to = formatDateUTC(today);
-  const from = formatDateUTC(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - 29)));
+  const from = formatDateUTC(
+    new Date(
+      Date.UTC(
+        today.getUTCFullYear(),
+        today.getUTCMonth(),
+        today.getUTCDate() - 29
+      )
+    )
+  );
   return { from, to };
 }
 
 function buildAuthUrl({ baseUrl, path, redirectUrl }) {
   const u = new URL(path, baseUrl);
-  u.searchParams.set('redirect', redirectUrl);
+  u.searchParams.set("redirect", redirectUrl);
   return u.toString();
 }
 
 async function fetchJson(url, { method, headers } = {}) {
   const res = await fetch(url, {
-    method: method || 'GET',
+    method: method || "GET",
     headers: {
-      ...(headers || {})
-    }
+      ...(headers || {}),
+    },
   });
 
   const text = await res.text();
@@ -75,10 +100,10 @@ async function fetchJson(url, { method, headers } = {}) {
 }
 
 function toDisplayNumber(value) {
-  if (value == null) return '-';
+  if (value == null) return "-";
   try {
-    if (typeof value === 'bigint') return new Intl.NumberFormat().format(value);
-    if (typeof value === 'number') return new Intl.NumberFormat().format(value);
+    if (typeof value === "bigint") return new Intl.NumberFormat().format(value);
+    if (typeof value === "number") return new Intl.NumberFormat().format(value);
     const s = String(value).trim();
     if (/^[0-9]+$/.test(s)) return new Intl.NumberFormat().format(BigInt(s));
     return s;
@@ -96,8 +121,8 @@ function toDigitString(value) {
   if (value == null) return null;
   const s = String(value).trim();
   if (!/^[0-9]+$/.test(s)) return null;
-  const stripped = s.replace(/^0+/, '');
-  return stripped.length === 0 ? '0' : stripped;
+  const stripped = s.replace(/^0+/, "");
+  return stripped.length === 0 ? "0" : stripped;
 }
 
 function compareIntLike(a, b) {
@@ -119,17 +144,17 @@ function compareIntLike(a, b) {
 }
 
 function compareDayString(a, b) {
-  const sa = typeof a === 'string' ? a : String(a || '');
-  const sb = typeof b === 'string' ? b : String(b || '');
+  const sa = typeof a === "string" ? a : String(a || "");
+  const sb = typeof b === "string" ? b : String(b || "");
   if (sa === sb) return 0;
   return sa < sb ? -1 : 1;
 }
 
 function sortDailyRows(rows, { key, dir }) {
-  const direction = dir === 'asc' ? 1 : -1;
+  const direction = dir === "asc" ? 1 : -1;
   const items = Array.isArray(rows) ? rows : [];
 
-  const cmp = key === 'day' ? compareDayString : compareIntLike;
+  const cmp = key === "day" ? compareDayString : compareIntLike;
 
   return items
     .map((row, index) => ({ row, index }))
@@ -151,7 +176,9 @@ function sortDailyRows(rows, { key, dir }) {
 }
 
 function Sparkline({ rows }) {
-  const values = (rows || []).map((r) => toFiniteNumber(r?.total_tokens)).filter((n) => typeof n === 'number');
+  const values = (rows || [])
+    .map((r) => toFiniteNumber(r?.total_tokens))
+    .filter((n) => typeof n === "number");
   if (values.length < 2) return null;
 
   const min = Math.min(...values);
@@ -169,10 +196,17 @@ function Sparkline({ rows }) {
     return { x, y };
   });
 
-  const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ');
+  const d = pts
+    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
+    .join(" ");
 
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} width="100%" height="120" aria-label="Daily token usage sparkline">
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      width="100%"
+      height="120"
+      aria-label="Daily token usage sparkline"
+    >
       <path
         className="tui-sparkline"
         d={d}
@@ -192,20 +226,23 @@ function MatrixRain() {
     const canvas = ref.current;
     if (!canvas) return;
 
-    const reduceMotion = Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
     if (reduceMotion) return;
 
-    const ctx = canvas.getContext('2d', { alpha: true });
+    const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
 
-    const fontSize = 14;
+    const fontSize = 16;
     const chars =
-      'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ#$%*+-=<>?';
+      "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(
+        ""
+      );
 
     let width = 0;
     let height = 0;
-    let columns = 0;
-    let drops = [];
+    let layers = [];
     let raf = 0;
 
     function resize() {
@@ -217,43 +254,88 @@ function MatrixRain() {
       canvas.height = Math.max(1, Math.floor(height * dpr));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      columns = Math.max(1, Math.floor(width / fontSize));
-      drops = Array.from({ length: columns }, () => Math.floor((Math.random() * height) / fontSize));
+      ctx.filter = "none";
+      ctx.fillStyle = "rgba(0, 0, 0, 1)";
+      ctx.fillRect(0, 0, width, height);
 
-      ctx.font = `${fontSize}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`;
-      ctx.textBaseline = 'top';
+      // 3 sparse layers for depth (elegant / low-noise).
+      layers = [
+        { density: 0.32, speed: 1.05, opacity: 0.32, size: 18, blur: 0 },
+        { density: 0.18, speed: 0.75, opacity: 0.14, size: 14, blur: 1 },
+        { density: 0.08, speed: 0.48, opacity: 0.07, size: 10, blur: 2 },
+      ].map((config) => {
+        const columns = Math.ceil(width / config.size);
+        const randChar = () => chars[Math.floor(Math.random() * chars.length)];
+        return {
+          ...config,
+          active: Array.from(
+            { length: columns },
+            () => Math.random() < config.density
+          ),
+          speeds: Array.from(
+            { length: columns },
+            () => config.speed * (0.75 + Math.random() * 0.5)
+          ),
+          glyphs: Array.from({ length: columns }, () => randChar()),
+          drops: Array.from({ length: columns }, () => Math.random() * -120),
+        };
+      });
     }
 
     resize();
-    window.addEventListener('resize', resize, { passive: true });
+    window.addEventListener("resize", resize, { passive: true });
 
     let last = 0;
-    const fps = 28;
-    const frameInterval = 1000 / fps;
-
     function draw(ts) {
-      if (!last) last = ts;
       const dt = ts - last;
-      if (dt < frameInterval) {
+      if (dt < 45) {
+        // Cap around ~22fps: calmer + more elegant.
         raf = window.requestAnimationFrame(draw);
         return;
       }
       last = ts;
 
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+      ctx.filter = "none";
+      ctx.fillStyle = "rgba(0, 0, 0, 0.12)";
       ctx.fillRect(0, 0, width, height);
 
-      ctx.fillStyle = 'rgba(0, 255, 65, 0.85)';
+      layers.forEach((layer) => {
+        ctx.font = `${layer.size}px "Share Tech Mono", monospace`;
+        ctx.fillStyle = `rgba(0, 255, 65, ${layer.opacity})`;
 
-      for (let i = 0; i < drops.length; i++) {
-        const x = i * fontSize;
-        const y = drops[i] * fontSize;
-        const ch = chars[Math.floor(Math.random() * chars.length)];
-        ctx.fillText(ch, x, y);
+        if (layer.blur > 0) {
+          ctx.filter = `blur(${layer.blur}px)`;
+        } else {
+          ctx.filter = "none";
+        }
 
-        if (y > height && Math.random() > 0.975) drops[i] = 0;
-        else drops[i] += 1;
-      }
+        for (let i = 0; i < layer.drops.length; i++) {
+          if (!layer.active[i]) continue;
+          const x = i * layer.size;
+          const y = layer.drops[i] * layer.size;
+
+          if (Math.random() > 0.985) {
+            layer.glyphs[i] = chars[Math.floor(Math.random() * chars.length)];
+          }
+          const char = layer.glyphs[i];
+
+          // Draw the character
+          ctx.fillText(char, x, y);
+
+          // Randomly "glitch" color for some characters
+          if (Math.random() > 0.995) {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+            ctx.fillText(char, x, y);
+            ctx.fillStyle = `rgba(0, 255, 65, ${layer.opacity})`;
+          }
+
+          if (y > height && Math.random() > 0.99) {
+            layer.drops[i] = Math.random() * -80;
+          } else {
+            layer.drops[i] += layer.speeds[i] || layer.speed;
+          }
+        }
+      });
 
       raf = window.requestAnimationFrame(draw);
     }
@@ -262,7 +344,7 @@ function MatrixRain() {
 
     return () => {
       window.cancelAnimationFrame(raf);
-      window.removeEventListener('resize', resize);
+      window.removeEventListener("resize", resize);
     };
   }, []);
 
@@ -303,8 +385,8 @@ function TuiWindow({ title, right, children }) {
 
 function ConnectCliPage({ defaultInsforgeBaseUrl }) {
   const url = useMemo(() => new URL(window.location.href), []);
-  const redirect = url.searchParams.get('redirect') || '';
-  const baseUrlOverride = url.searchParams.get('base_url') || '';
+  const redirect = url.searchParams.get("redirect") || "";
+  const baseUrlOverride = url.searchParams.get("base_url") || "";
 
   let redirectUrl = null;
   try {
@@ -312,7 +394,10 @@ function ConnectCliPage({ defaultInsforgeBaseUrl }) {
   } catch (_e) {}
 
   const safeRedirect =
-    redirectUrl && redirectUrl.protocol === 'http:' && (redirectUrl.hostname === '127.0.0.1' || redirectUrl.hostname === 'localhost')
+    redirectUrl &&
+    redirectUrl.protocol === "http:" &&
+    (redirectUrl.hostname === "127.0.0.1" ||
+      redirectUrl.hostname === "localhost")
       ? redirectUrl.toString()
       : null;
 
@@ -320,12 +405,20 @@ function ConnectCliPage({ defaultInsforgeBaseUrl }) {
 
   const signInUrl = useMemo(() => {
     if (!safeRedirect) return null;
-    return buildAuthUrl({ baseUrl: insforgeBaseUrl, path: '/auth/sign-in', redirectUrl: safeRedirect });
+    return buildAuthUrl({
+      baseUrl: insforgeBaseUrl,
+      path: "/auth/sign-in",
+      redirectUrl: safeRedirect,
+    });
   }, [insforgeBaseUrl, safeRedirect]);
 
   const signUpUrl = useMemo(() => {
     if (!safeRedirect) return null;
-    return buildAuthUrl({ baseUrl: insforgeBaseUrl, path: '/auth/sign-up', redirectUrl: safeRedirect });
+    return buildAuthUrl({
+      baseUrl: insforgeBaseUrl,
+      path: "/auth/sign-up",
+      redirectUrl: safeRedirect,
+    });
   }, [insforgeBaseUrl, safeRedirect]);
 
   return (
@@ -336,12 +429,17 @@ function ConnectCliPage({ defaultInsforgeBaseUrl }) {
     >
       <TuiWindow title="Link your CLI">
         <p className="muted" style={{ marginTop: 0 }}>
-          Sign in or sign up. When finished, the browser will return to your local CLI to complete setup.
+          Sign in or sign up. When finished, the browser will return to your
+          local CLI to complete setup.
         </p>
 
         {!safeRedirect ? (
-          <div className="muted" style={{ marginTop: 12, color: 'var(--error)' }}>
-            Invalid or missing <code>redirect</code> URL. This page must be opened from the CLI.
+          <div
+            className="muted"
+            style={{ marginTop: 12, color: "var(--error)" }}
+          >
+            Invalid or missing <code>redirect</code> URL. This page must be
+            opened from the CLI.
           </div>
         ) : (
           <div className="row" style={{ marginTop: 12 }}>
@@ -363,13 +461,20 @@ export default function App() {
   const [auth, setAuth] = useState(() => loadAuth());
   const isLocalhost = useMemo(() => {
     const h = window.location.hostname;
-    return h === 'localhost' || h === '127.0.0.1';
+    return h === "localhost" || h === "127.0.0.1";
   }, []);
-  const installInitCmd = isLocalhost ? 'node bin/tracker.js init' : 'npx --yes @vibescore/tracker init';
-  const installSyncCmd = isLocalhost ? 'node bin/tracker.js sync' : 'npx --yes @vibescore/tracker sync';
+  const installInitCmd = isLocalhost
+    ? "node bin/tracker.js init"
+    : "npx --yes @vibescore/tracker init";
+  const installSyncCmd = isLocalhost
+    ? "node bin/tracker.js sync"
+    : "npx --yes @vibescore/tracker sync";
 
-  const routePath = useMemo(() => window.location.pathname.replace(/\/+$/, '') || '/', []);
-  if (routePath === '/connect') {
+  const routePath = useMemo(
+    () => window.location.pathname.replace(/\/+$/, "") || "/",
+    []
+  );
+  if (routePath === "/connect") {
     return <ConnectCliPage defaultInsforgeBaseUrl={baseUrl} />;
   }
 
@@ -382,57 +487,63 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const [sort, setSort] = useState(() => ({ key: 'day', dir: 'desc' }));
+  const [sort, setSort] = useState(() => ({ key: "day", dir: "desc" }));
   const sortedDaily = useMemo(() => sortDailyRows(daily, sort), [daily, sort]);
-  const sparklineRows = useMemo(() => sortDailyRows(daily, { key: 'day', dir: 'asc' }), [daily]);
+  const sparklineRows = useMemo(
+    () => sortDailyRows(daily, { key: "day", dir: "asc" }),
+    [daily]
+  );
 
   function toggleSort(key) {
     setSort((prev) => {
       if (prev.key === key) {
-        return { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' };
+        return { key, dir: prev.dir === "asc" ? "desc" : "asc" };
       }
-      return { key, dir: 'desc' };
+      return { key, dir: "desc" };
     });
   }
 
   function ariaSortFor(key) {
-    if (sort.key !== key) return 'none';
-    return sort.dir === 'asc' ? 'ascending' : 'descending';
+    if (sort.key !== key) return "none";
+    return sort.dir === "asc" ? "ascending" : "descending";
   }
 
   function sortIconFor(key) {
-    if (sort.key !== key) return '';
-    return sort.dir === 'asc' ? '^' : 'v';
+    if (sort.key !== key) return "";
+    return sort.dir === "asc" ? "^" : "v";
   }
 
-  const redirectUrl = useMemo(() => `${window.location.origin}/auth/callback`, []);
+  const redirectUrl = useMemo(
+    () => `${window.location.origin}/auth/callback`,
+    []
+  );
   const signInUrl = useMemo(
-    () => buildAuthUrl({ baseUrl, path: '/auth/sign-in', redirectUrl }),
+    () => buildAuthUrl({ baseUrl, path: "/auth/sign-in", redirectUrl }),
     [baseUrl, redirectUrl]
   );
   const signUpUrl = useMemo(
-    () => buildAuthUrl({ baseUrl, path: '/auth/sign-up', redirectUrl }),
+    () => buildAuthUrl({ baseUrl, path: "/auth/sign-up", redirectUrl }),
     [baseUrl, redirectUrl]
   );
 
   useEffect(() => {
-    const path = window.location.pathname.replace(/\/+$/, '');
-    if (path !== '/auth/callback') return;
+    const path = window.location.pathname.replace(/\/+$/, "");
+    if (path !== "/auth/callback") return;
 
     const params = new URLSearchParams(window.location.search);
-    const accessToken = params.get('access_token') || '';
+    const accessToken = params.get("access_token") || "";
     if (!accessToken) return;
 
     const next = {
       accessToken,
-      userId: params.get('user_id') || null,
-      email: params.get('email') || null,
-      name: params.get('name') || null,
-      savedAt: new Date().toISOString()
+      userId: params.get("user_id") || null,
+      email: params.get("email") || null,
+      name: params.get("name") || null,
+      savedAt: new Date().toISOString(),
     };
     saveAuth(next);
     setAuth(next);
-    window.history.replaceState({}, '', '/');
+    window.history.replaceState({}, "", "/");
   }, []);
 
   async function refresh() {
@@ -441,17 +552,17 @@ export default function App() {
     setError(null);
     try {
       const headers = { Authorization: `Bearer ${auth.accessToken}` };
-      const dailyUrl = new URL('/functions/vibescore-usage-daily', baseUrl);
-      dailyUrl.searchParams.set('from', from);
-      dailyUrl.searchParams.set('to', to);
+      const dailyUrl = new URL("/functions/vibescore-usage-daily", baseUrl);
+      dailyUrl.searchParams.set("from", from);
+      dailyUrl.searchParams.set("to", to);
 
-      const summaryUrl = new URL('/functions/vibescore-usage-summary', baseUrl);
-      summaryUrl.searchParams.set('from', from);
-      summaryUrl.searchParams.set('to', to);
+      const summaryUrl = new URL("/functions/vibescore-usage-summary", baseUrl);
+      summaryUrl.searchParams.set("from", from);
+      summaryUrl.searchParams.set("to", to);
 
       const [dailyRes, summaryRes] = await Promise.all([
         fetchJson(dailyUrl.toString(), { headers }),
-        fetchJson(summaryUrl.toString(), { headers })
+        fetchJson(summaryUrl.toString(), { headers }),
       ]);
 
       setDaily(Array.isArray(dailyRes?.data) ? dailyRes.data : []);
@@ -472,11 +583,11 @@ export default function App() {
   }, [auth?.accessToken, from, to]);
 
   const signedIn = Boolean(auth?.accessToken);
-  const title = 'VibeScore';
+  const title = "VibeScore";
 
   const headerRight = signedIn ? (
-    <div className="row" style={{ justifyContent: 'flex-end' }}>
-      <span className="muted">{auth?.email ? auth.email : 'Signed in'}</span>
+    <div className="row" style={{ justifyContent: "flex-end" }}>
+      <span className="muted">{auth?.email ? auth.email : "Signed in"}</span>
       <button
         className="btn"
         onClick={() => {
@@ -494,7 +605,15 @@ export default function App() {
   );
 
   return (
-    <TuiFrame title={title} right={headerRight} footer={signedIn ? 'UTC aggregates • click Refresh to reload' : 'Sign in to view UTC token aggregates'}>
+    <TuiFrame
+      title={title}
+      right={headerRight}
+      footer={
+        signedIn
+          ? "UTC aggregates • click Refresh to reload"
+          : "Sign in to view UTC token aggregates"
+      }
+    >
       {!signedIn ? (
         <TuiWindow title="Auth required">
           <p className="muted" style={{ marginTop: 0 }}>
@@ -522,28 +641,42 @@ export default function App() {
             </p>
           </TuiWindow>
 
-          <TuiWindow
-            title="Query"
-            right={<span className="muted">UTC</span>}
-          >
+          <TuiWindow title="Query" right={<span className="muted">UTC</span>}>
             <div className="row">
               <label className="muted">
                 From&nbsp;
-                <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+                <input
+                  type="date"
+                  value={from}
+                  onChange={(e) => setFrom(e.target.value)}
+                />
               </label>
               <label className="muted">
                 To&nbsp;
-                <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+                <input
+                  type="date"
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                />
               </label>
-              <button className="btn primary" disabled={loading} onClick={refresh}>
-                {loading ? 'Loading…' : 'Refresh'}
+              <button
+                className="btn primary"
+                disabled={loading}
+                onClick={refresh}
+              >
+                {loading ? "Loading…" : "Refresh"}
               </button>
               <div className="spacer" />
-              <span className="muted">{baseUrl.replace(/^https?:\/\//, '')}</span>
+              <span className="muted">
+                {baseUrl.replace(/^https?:\/\//, "")}
+              </span>
             </div>
 
             {error ? (
-              <div className="muted" style={{ marginTop: 12, color: 'var(--error)' }}>
+              <div
+                className="muted"
+                style={{ marginTop: 12, color: "var(--error)" }}
+              >
                 Error: {error}
               </div>
             ) : null}
@@ -553,23 +686,33 @@ export default function App() {
             <div className="grid">
               <div className="metric">
                 <div className="label">Total</div>
-                <div className="value">{toDisplayNumber(summary?.total_tokens)}</div>
+                <div className="value">
+                  {toDisplayNumber(summary?.total_tokens)}
+                </div>
               </div>
               <div className="metric">
                 <div className="label">Input</div>
-                <div className="value">{toDisplayNumber(summary?.input_tokens)}</div>
+                <div className="value">
+                  {toDisplayNumber(summary?.input_tokens)}
+                </div>
               </div>
               <div className="metric">
                 <div className="label">Output</div>
-                <div className="value">{toDisplayNumber(summary?.output_tokens)}</div>
+                <div className="value">
+                  {toDisplayNumber(summary?.output_tokens)}
+                </div>
               </div>
               <div className="metric">
                 <div className="label">Cached input</div>
-                <div className="value">{toDisplayNumber(summary?.cached_input_tokens)}</div>
+                <div className="value">
+                  {toDisplayNumber(summary?.cached_input_tokens)}
+                </div>
               </div>
               <div className="metric">
                 <div className="label">Reasoning output</div>
-                <div className="value">{toDisplayNumber(summary?.reasoning_output_tokens)}</div>
+                <div className="value">
+                  {toDisplayNumber(summary?.reasoning_output_tokens)}
+                </div>
               </div>
             </div>
           </TuiWindow>
@@ -581,10 +724,16 @@ export default function App() {
           <TuiWindow title="Daily totals">
             {daily.length === 0 ? (
               <div className="muted">
-                No data yet. Use Codex CLI then run <code>{installSyncCmd}</code>.
+                No data yet. Use Codex CLI then run{" "}
+                <code>{installSyncCmd}</code>.
               </div>
             ) : (
-              <div className="tui-table-scroll" role="region" aria-label="Daily totals table" tabIndex={0}>
+              <div
+                className="tui-table-scroll"
+                role="region"
+                aria-label="Daily totals table"
+                tabIndex={0}
+              >
                 <table>
                   <thead>
                     <tr>
@@ -596,8 +745,12 @@ export default function App() {
                             onClick={() => toggleSort(c.key)}
                             title={c.title}
                           >
-                            {c.label}{' '}
-                            <span className={`tui-sort-indicator ${sort.key === c.key ? 'active' : ''}`}>
+                            {c.label}{" "}
+                            <span
+                              className={`tui-sort-indicator ${
+                                sort.key === c.key ? "active" : ""
+                              }`}
+                            >
                               {sortIconFor(c.key)}
                             </span>
                           </button>
