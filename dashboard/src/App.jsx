@@ -2,15 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 const STORAGE_KEY = 'vibescore.dashboard.auth.v1';
 
-const DAILY_SORT_COLUMNS = [
-  { key: 'day', label: 'Date', title: 'Sort by Date' },
-  { key: 'total_tokens', label: 'Total', title: 'Sort by Total' },
-  { key: 'input_tokens', label: 'Input', title: 'Sort by Input' },
-  { key: 'output_tokens', label: 'Output', title: 'Sort by Output' },
-  { key: 'cached_input_tokens', label: 'Cached', title: 'Sort by Cached input' },
-  { key: 'reasoning_output_tokens', label: 'Reasoning', title: 'Sort by Reasoning output' }
-];
-
 function getInsforgeBaseUrl() {
   return import.meta.env.VITE_VIBESCORE_INSFORGE_BASE_URL || 'https://5tmappuk.us-east.insforge.app';
 }
@@ -92,64 +83,6 @@ function toFiniteNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
-function toDigitString(value) {
-  if (value == null) return null;
-  const s = String(value).trim();
-  if (!/^[0-9]+$/.test(s)) return null;
-  const stripped = s.replace(/^0+/, '');
-  return stripped.length === 0 ? '0' : stripped;
-}
-
-function compareIntLike(a, b) {
-  const sa = toDigitString(a);
-  const sb = toDigitString(b);
-  if (sa && sb) {
-    if (sa.length !== sb.length) return sa.length < sb.length ? -1 : 1;
-    if (sa === sb) return 0;
-    return sa < sb ? -1 : 1;
-  }
-
-  const na = toFiniteNumber(a);
-  const nb = toFiniteNumber(b);
-  if (na == null && nb == null) return 0;
-  if (na == null) return 1;
-  if (nb == null) return -1;
-  if (na === nb) return 0;
-  return na < nb ? -1 : 1;
-}
-
-function compareDayString(a, b) {
-  const sa = typeof a === 'string' ? a : String(a || '');
-  const sb = typeof b === 'string' ? b : String(b || '');
-  if (sa === sb) return 0;
-  return sa < sb ? -1 : 1;
-}
-
-function sortDailyRows(rows, { key, dir }) {
-  const direction = dir === 'asc' ? 1 : -1;
-  const items = Array.isArray(rows) ? rows : [];
-
-  const cmp = key === 'day' ? compareDayString : compareIntLike;
-
-  return items
-    .map((row, index) => ({ row, index }))
-    .sort((a, b) => {
-      const av = a.row?.[key];
-      const bv = b.row?.[key];
-
-      const aMissing = av == null;
-      const bMissing = bv == null;
-      if (aMissing && bMissing) return a.index - b.index;
-      if (aMissing) return 1;
-      if (bMissing) return -1;
-
-      const base = cmp(av, bv);
-      if (base !== 0) return base * direction;
-      return a.index - b.index;
-    })
-    .map((x) => x.row);
-}
-
 function Sparkline({ rows }) {
   const values = (rows || []).map((r) => toFiniteNumber(r?.total_tokens)).filter((n) => typeof n === 'number');
   if (values.length < 2) return null;
@@ -173,46 +106,8 @@ function Sparkline({ rows }) {
 
   return (
     <svg viewBox={`0 0 ${w} ${h}`} width="100%" height="120" aria-label="Daily token usage sparkline">
-      <path
-        className="tui-sparkline"
-        d={d}
-        fill="none"
-        stroke="var(--accent)"
-        strokeWidth="2.5"
-        vectorEffect="non-scaling-stroke"
-      />
+      <path d={d} fill="none" stroke="rgba(0,255,136,0.9)" strokeWidth="2.5" />
     </svg>
-  );
-}
-
-function TuiFrame({ title, right, footer, children }) {
-  return (
-    <div className="tui-screen">
-      <div className="tui-frame">
-        <div className="tui-header">
-          <div className="tui-title">{title}</div>
-          <div className="tui-spacer" />
-          {right}
-        </div>
-        <div className="tui-body">{children}</div>
-        <div className="tui-footer">
-          <span className="muted">{footer}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TuiWindow({ title, right, children }) {
-  return (
-    <div className="tui-window">
-      <div className="tui-window-bar">
-        <div className="tui-window-title">{title}</div>
-        <div className="tui-spacer" />
-        {right}
-      </div>
-      <div className="tui-window-body">{children}</div>
-    </div>
   );
 }
 
@@ -244,18 +139,21 @@ function ConnectCliPage({ defaultInsforgeBaseUrl }) {
   }, [insforgeBaseUrl, safeRedirect]);
 
   return (
-    <TuiFrame
-      title="VibeScore"
-      right={<span className="muted">Connect CLI</span>}
-      footer="Click sign-in/sign-up. On success, your browser returns to the local CLI callback."
-    >
-      <TuiWindow title="Link your CLI">
-        <p className="muted" style={{ marginTop: 0 }}>
+    <div className="container">
+      <div className="row" style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 18, fontWeight: 900 }}>VibeScore</div>
+        <div className="spacer" />
+        <span className="muted">Connect CLI</span>
+      </div>
+
+      <div className="card">
+        <div style={{ fontSize: 16, fontWeight: 800 }}>Link your CLI</div>
+        <p className="muted" style={{ marginTop: 8 }}>
           Sign in or sign up. When finished, the browser will return to your local CLI to complete setup.
         </p>
 
         {!safeRedirect ? (
-          <div className="muted" style={{ marginTop: 12, color: 'var(--error)' }}>
+          <div className="muted" style={{ marginTop: 12, color: '#ffb4b4' }}>
             Invalid or missing <code>redirect</code> URL. This page must be opened from the CLI.
           </div>
         ) : (
@@ -268,8 +166,8 @@ function ConnectCliPage({ defaultInsforgeBaseUrl }) {
             </a>
           </div>
         )}
-      </TuiWindow>
-    </TuiFrame>
+      </div>
+    </div>
   );
 }
 
@@ -296,29 +194,6 @@ export default function App() {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  const [sort, setSort] = useState(() => ({ key: 'day', dir: 'desc' }));
-  const sortedDaily = useMemo(() => sortDailyRows(daily, sort), [daily, sort]);
-  const sparklineRows = useMemo(() => sortDailyRows(daily, { key: 'day', dir: 'asc' }), [daily]);
-
-  function toggleSort(key) {
-    setSort((prev) => {
-      if (prev.key === key) {
-        return { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' };
-      }
-      return { key, dir: 'desc' };
-    });
-  }
-
-  function ariaSortFor(key) {
-    if (sort.key !== key) return 'none';
-    return sort.dir === 'asc' ? 'ascending' : 'descending';
-  }
-
-  function sortIconFor(key) {
-    if (sort.key !== key) return '';
-    return sort.dir === 'asc' ? '^' : 'v';
-  }
 
   const redirectUrl = useMemo(() => `${window.location.origin}/auth/callback`, []);
   const signInUrl = useMemo(
@@ -389,31 +264,33 @@ export default function App() {
   const signedIn = Boolean(auth?.accessToken);
   const title = 'VibeScore';
 
-  const headerRight = signedIn ? (
-    <div className="row" style={{ justifyContent: 'flex-end' }}>
-      <span className="muted">{auth?.email ? auth.email : 'Signed in'}</span>
-      <button
-        className="btn"
-        onClick={() => {
-          clearAuth();
-          setAuth(null);
-          setDaily([]);
-          setSummary(null);
-        }}
-      >
-        Sign out
-      </button>
-    </div>
-  ) : (
-    <span className="muted">Not signed in</span>
-  );
-
   return (
-    <TuiFrame title={title} right={headerRight} footer={signedIn ? 'UTC aggregates • click Refresh to reload' : 'Sign in to view UTC token aggregates'}>
+    <div className="container">
+      <div className="row" style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 18, fontWeight: 900 }}>{title}</div>
+        <div className="spacer" />
+        {signedIn ? (
+          <button
+            className="btn"
+            onClick={() => {
+              clearAuth();
+              setAuth(null);
+              setDaily([]);
+              setSummary(null);
+            }}
+          >
+            Sign out
+          </button>
+        ) : (
+          <span className="muted">Not signed in</span>
+        )}
+      </div>
+
       {!signedIn ? (
-        <TuiWindow title="Auth required">
-          <p className="muted" style={{ marginTop: 0 }}>
-            Sign in / sign up to view your daily token usage (UTC).
+        <div className="card">
+          <div style={{ fontSize: 16, fontWeight: 800 }}>auth required</div>
+          <p className="muted" style={{ marginTop: 8 }}>
+            sign in / sign up to view your daily token usage (UTC).
           </p>
 
           <div className="row" style={{ marginTop: 12 }}>
@@ -424,120 +301,114 @@ export default function App() {
               $ sign-up
             </a>
           </div>
-        </TuiWindow>
+        </div>
       ) : (
-        <>
-          <TuiWindow title="Install">
-            <p className="muted" style={{ marginTop: 0 }}>
+        <div className="card">
+          <div className="row">
+            <div style={{ fontSize: 16, fontWeight: 800 }}>Dashboard</div>
+            <div className="spacer" />
+            <div className="muted">{auth?.email ? auth.email : 'Signed in'}</div>
+          </div>
+
+          <div className="card" style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 800 }}>install</div>
+            <p className="muted" style={{ marginTop: 8 }}>
               1) run <code>{installInitCmd}</code>
               <br />
               2) use Codex CLI normally
               <br />
               3) run <code>{installSyncCmd}</code> (or wait for auto sync)
             </p>
-          </TuiWindow>
+          </div>
 
-          <TuiWindow
-            title="Query"
-            right={<span className="muted">UTC</span>}
-          >
-            <div className="row">
-              <label className="muted">
-                From&nbsp;
-                <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-              </label>
-              <label className="muted">
-                To&nbsp;
-                <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-              </label>
-              <button className="btn primary" disabled={loading} onClick={refresh}>
-                {loading ? 'Loading…' : 'Refresh'}
-              </button>
-              <div className="spacer" />
-              <span className="muted">{baseUrl.replace(/^https?:\/\//, '')}</span>
+          <div className="row" style={{ marginTop: 12 }}>
+            <label className="muted">
+              From (UTC)&nbsp;
+              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            </label>
+            <label className="muted">
+              To (UTC)&nbsp;
+              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+            </label>
+            <button className="btn primary" disabled={loading} onClick={refresh}>
+              {loading ? 'Loading…' : 'Refresh'}
+            </button>
+            <div className="spacer" />
+            <span className="muted">UTC aggregates</span>
+          </div>
+
+          {error ? (
+            <div className="muted" style={{ marginTop: 12, color: '#ffb4b4' }}>
+              Error: {error}
             </div>
+          ) : null}
 
-            {error ? (
-              <div className="muted" style={{ marginTop: 12, color: 'var(--error)' }}>
-                Error: {error}
-              </div>
-            ) : null}
-          </TuiWindow>
-
-          <TuiWindow title="Metrics">
+          <div style={{ marginTop: 16 }}>
             <div className="grid">
-              <div className="metric">
+              <div className="card metric">
                 <div className="label">Total</div>
                 <div className="value">{toDisplayNumber(summary?.total_tokens)}</div>
               </div>
-              <div className="metric">
+              <div className="card metric">
                 <div className="label">Input</div>
                 <div className="value">{toDisplayNumber(summary?.input_tokens)}</div>
               </div>
-              <div className="metric">
+              <div className="card metric">
                 <div className="label">Output</div>
                 <div className="value">{toDisplayNumber(summary?.output_tokens)}</div>
               </div>
-              <div className="metric">
+              <div className="card metric">
                 <div className="label">Cached input</div>
                 <div className="value">{toDisplayNumber(summary?.cached_input_tokens)}</div>
               </div>
-              <div className="metric">
+              <div className="card metric">
                 <div className="label">Reasoning output</div>
                 <div className="value">{toDisplayNumber(summary?.reasoning_output_tokens)}</div>
               </div>
             </div>
-          </TuiWindow>
+          </div>
 
-          <TuiWindow title="Sparkline">
-            <Sparkline rows={sparklineRows} />
-          </TuiWindow>
+          <div style={{ marginTop: 14 }}>
+            <Sparkline rows={daily} />
+          </div>
 
-          <TuiWindow title="Daily totals">
+          <div style={{ marginTop: 8 }}>
+            <div className="muted" style={{ marginBottom: 8 }}>
+              Daily totals
+            </div>
             {daily.length === 0 ? (
               <div className="muted">
                 No data yet. Use Codex CLI then run <code>{installSyncCmd}</code>.
               </div>
             ) : (
-              <div className="tui-table-scroll" role="region" aria-label="Daily totals table" tabIndex={0}>
-                <table>
-                  <thead>
-                    <tr>
-                      {DAILY_SORT_COLUMNS.map((c) => (
-                        <th key={c.key} aria-sort={ariaSortFor(c.key)}>
-                          <button
-                            type="button"
-                            className="tui-th-btn"
-                            onClick={() => toggleSort(c.key)}
-                            title={c.title}
-                          >
-                            {c.label}{' '}
-                            <span className={`tui-sort-indicator ${sort.key === c.key ? 'active' : ''}`}>
-                              {sortIconFor(c.key)}
-                            </span>
-                          </button>
-                        </th>
-                      ))}
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Total</th>
+                    <th>Input</th>
+                    <th>Output</th>
+                    <th>Cached</th>
+                    <th>Reasoning</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {daily.map((r) => (
+                    <tr key={String(r.day)}>
+                      <td>{String(r.day)}</td>
+                      <td>{toDisplayNumber(r.total_tokens)}</td>
+                      <td>{toDisplayNumber(r.input_tokens)}</td>
+                      <td>{toDisplayNumber(r.output_tokens)}</td>
+                      <td>{toDisplayNumber(r.cached_input_tokens)}</td>
+                      <td>{toDisplayNumber(r.reasoning_output_tokens)}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {sortedDaily.map((r) => (
-                      <tr key={String(r.day)}>
-                        <td>{String(r.day)}</td>
-                        <td>{toDisplayNumber(r.total_tokens)}</td>
-                        <td>{toDisplayNumber(r.input_tokens)}</td>
-                        <td>{toDisplayNumber(r.output_tokens)}</td>
-                        <td>{toDisplayNumber(r.cached_input_tokens)}</td>
-                        <td>{toDisplayNumber(r.reasoning_output_tokens)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             )}
-          </TuiWindow>
-        </>
+          </div>
+        </div>
       )}
-    </TuiFrame>
+    </div>
   );
 }
