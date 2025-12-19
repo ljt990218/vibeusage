@@ -13,9 +13,11 @@ jobs:
         env:
           BASE_URL: ${{ secrets.INSFORGE_BASE_URL }}
           SERVICE_ROLE_KEY: ${{ secrets.INSFORGE_SERVICE_ROLE_KEY }}
+          API_KEY: ${{ secrets.INSFORGE_API_KEY }}
         run: |
-          if [ -z "$BASE_URL" ] || [ -z "$SERVICE_ROLE_KEY" ]; then
-            echo "Missing INSFORGE_BASE_URL or INSFORGE_SERVICE_ROLE_KEY" >&2
+          TOKEN="${API_KEY:-$SERVICE_ROLE_KEY}"
+          if [ -z "$BASE_URL" ] || [ -z "$TOKEN" ]; then
+            echo "Missing INSFORGE_BASE_URL or INSFORGE_API_KEY/INSFORGE_SERVICE_ROLE_KEY" >&2
             exit 1
           fi
 
@@ -24,6 +26,6 @@ jobs:
             --retry-all-errors \
             --retry-delay 2 \
             -X POST "$BASE_URL/functions/vibescore-leaderboard-refresh" \
-            -H "Authorization: Bearer $SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: application/json" \
             --data "{}"

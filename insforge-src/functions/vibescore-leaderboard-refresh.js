@@ -21,7 +21,7 @@ module.exports = async function(request) {
   if (methodErr) return methodErr;
 
   const serviceRoleKey = getServiceRoleKey();
-  if (!serviceRoleKey) return json({ error: 'Service role key missing' }, 500);
+  if (!serviceRoleKey) return json({ error: 'Admin key missing' }, 500);
 
   const bearer = getBearerToken(request.headers.get('Authorization'));
   if (!bearer || bearer !== serviceRoleKey) return json({ error: 'Unauthorized' }, 401);

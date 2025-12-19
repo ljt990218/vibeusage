@@ -9,10 +9,10 @@ The system SHALL compute leaderboard rankings from a precomputed snapshot that i
 - **AND** the response SHALL include the snapshot `generated_at`
 
 ### Requirement: Leaderboard snapshots are refreshable by authorized automation
-The system SHALL expose a refresh endpoint that rebuilds the current UTC leaderboard snapshots and is restricted to service-role callers.
+The system SHALL expose a refresh endpoint that rebuilds the current UTC leaderboard snapshots and is restricted to service-role or project-admin callers.
 
 #### Scenario: Automation refreshes leaderboard snapshots
-- **GIVEN** a valid service-role bearer token
+- **GIVEN** a valid service-role or project-admin bearer token
 - **WHEN** the caller sends `POST /functions/vibescore-leaderboard-refresh`
 - **THEN** the snapshots for `day|week|month|total` SHALL be regenerated
 - **AND** the response SHALL include the refresh `generated_at` timestamp

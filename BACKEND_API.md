@@ -201,7 +201,7 @@ Response:
 Rebuild leaderboard snapshots for the current UTC windows (`day|week|month|total`). Intended for automation (service role only).
 
 Auth:
-- `Authorization: Bearer <service_role_key>`
+- `Authorization: Bearer <service_role_key|api_key>`
 
 Query (optional):
 - `period=day|week|month|total` (when omitted, refreshes all periods)

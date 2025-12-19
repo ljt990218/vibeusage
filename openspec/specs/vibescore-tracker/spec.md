@@ -158,10 +158,10 @@ The leaderboard endpoint MUST validate inputs and enforce reasonable limits to a
 - **THEN** the endpoint SHALL respond with `400`
 
 ### Requirement: Leaderboard snapshots can be refreshed by automation
-The system SHALL expose an authenticated refresh endpoint that rebuilds the current UTC leaderboard snapshots.
+The system SHALL expose an authenticated refresh endpoint that rebuilds the current UTC leaderboard snapshots, restricted to service-role or project-admin callers.
 
 #### Scenario: Automation refreshes leaderboard snapshots
-- **GIVEN** a valid service-role bearer token
+- **GIVEN** a valid service-role or project-admin bearer token
 - **WHEN** the caller sends `POST /functions/vibescore-leaderboard-refresh`
 - **THEN** the response SHALL include `generated_at` and per-period refresh results
 

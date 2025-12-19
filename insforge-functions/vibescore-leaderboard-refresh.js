@@ -89,7 +89,7 @@ var require_env = __commonJS({
       return Deno.env.get("INSFORGE_INTERNAL_URL") || "http://insforge:7130";
     }
     function getServiceRoleKey2() {
-      return Deno.env.get("INSFORGE_SERVICE_ROLE_KEY") || Deno.env.get("SERVICE_ROLE_KEY") || null;
+      return Deno.env.get("INSFORGE_SERVICE_ROLE_KEY") || Deno.env.get("SERVICE_ROLE_KEY") || Deno.env.get("INSFORGE_API_KEY") || Deno.env.get("API_KEY") || null;
     }
     function getAnonKey2() {
       return Deno.env.get("ANON_KEY") || Deno.env.get("INSFORGE_ANON_KEY") || null;
@@ -217,7 +217,7 @@ module.exports = async function(request) {
   const methodErr = requireMethod(request, "POST");
   if (methodErr) return methodErr;
   const serviceRoleKey = getServiceRoleKey();
-  if (!serviceRoleKey) return json({ error: "Service role key missing" }, 500);
+  if (!serviceRoleKey) return json({ error: "Admin key missing" }, 500);
   const bearer = getBearerToken(request.headers.get("Authorization"));
   if (!bearer || bearer !== serviceRoleKey) return json({ error: "Unauthorized" }, 401);
   const baseUrl = getBaseUrl();

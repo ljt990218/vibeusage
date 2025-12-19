@@ -5,7 +5,13 @@ function getBaseUrl() {
 }
 
 function getServiceRoleKey() {
-  return Deno.env.get('INSFORGE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY') || null;
+  return (
+    Deno.env.get('INSFORGE_SERVICE_ROLE_KEY') ||
+    Deno.env.get('SERVICE_ROLE_KEY') ||
+    Deno.env.get('INSFORGE_API_KEY') ||
+    Deno.env.get('API_KEY') ||
+    null
+  );
 }
 
 function getAnonKey() {
@@ -17,4 +23,3 @@ module.exports = {
   getServiceRoleKey,
   getAnonKey
 };
-
