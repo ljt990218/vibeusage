@@ -25,7 +25,7 @@ export function MatrixShell({
         <header className="flex justify-between border-b border-[#00FF41]/20 pb-3 mb-6 items-center shrink-0">
           <div className="flex items-center space-x-6">
             <div className="bg-[#00FF41] text-black px-3 py-1 font-black text-xs">
-              VIBE_SYSTEM_A
+              VIBE SCORE
             </div>
             <div className="flex items-center space-x-4 opacity-50 text-[9px] tracking-widest font-black uppercase">
               {headerStatus || (
