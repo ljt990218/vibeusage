@@ -2,7 +2,7 @@ name: Refresh Leaderboard Snapshots
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '0 */3 * * *'
   workflow_dispatch:
 
 jobs:
@@ -21,11 +21,15 @@ jobs:
             exit 1
           fi
 
-          curl --fail --show-error --silent \
-            --retry 3 \
-            --retry-all-errors \
-            --retry-delay 2 \
-            -X POST "$BASE_URL/functions/vibescore-leaderboard-refresh" \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: application/json" \
-            --data "{}"
+          for period in day week month total; do
+            echo "Refreshing period=${period}"
+            curl --fail --show-error --silent \
+              --retry 3 \
+              --retry-all-errors \
+              --retry-delay 2 \
+              -X POST "$BASE_URL/functions/vibescore-leaderboard-refresh?period=${period}" \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Content-Type: application/json" \
+              --data "{}"
+            sleep 2
+          done
