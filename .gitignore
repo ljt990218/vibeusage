@@ -14,3 +14,7 @@ pnpm-debug.log*
 # Local-only snapshots and experiments
 /backups/
 /copy2.jsx
+
+# Local-only docs
+/AGENTS.md
+/BACKEND_API.md
