@@ -203,7 +203,7 @@ export function TrendMonitor({
   const pointCount = Math.max(bucketCount, 1);
   const step = pointCount > 1 ? plotWidth / (pointCount - 1) : 0;
   const xPadding =
-    pointCount > 1 ? Math.min(step / 2, plotWidth * 0.12) : plotWidth / 2;
+    pointCount > 1 ? Math.min(step * 0.25, plotWidth * 0.04) : plotWidth / 2;
   const plotSpan = Math.max(plotWidth - xPadding * 2, 0);
   const stepWithPadding = pointCount > 1 ? plotSpan / (pointCount - 1) : 0;
   const plotTop = 4;
