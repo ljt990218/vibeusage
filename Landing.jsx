@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 
 // =============================================================================
-// 1. 绝对安全的视觉引擎 (CORE ENGINE)
+// 1. 视觉引擎 (CORE ENGINE)
 // =============================================================================
 
 /**
@@ -157,10 +157,6 @@ const MatrixAvatar = ({ name = "USER", isTheOne = false, size = 64 }) => {
   );
 };
 
-// =============================================================================
-// 3. 实时演示组件 (已更新审核文字)
-// =============================================================================
-
 const LiveSniffer = () => {
   const [logs, setLogs] = useState([
     "[SYSTEM] KERNEL_UPLINK_ESTABLISHED",
@@ -200,7 +196,7 @@ const LiveSniffer = () => {
 };
 
 // =============================================================================
-// 4. 登录页主入口 (APP)
+// 3. 根组件 (MAIN APP)
 // =============================================================================
 
 export default function App() {
@@ -241,7 +237,7 @@ export default function App() {
             </div>
             {/* 包含 Codex CLI Token 的精准描述 */}
             <p className="text-[9px] text-[#00FF41]/60 uppercase tracking-[0.2em]">
-              Real-time Token Analytics for Codex CLI & AI Engineers.
+              for codex cli token // Real-time Neural Analytics
             </p>
           </div>
         </div>
@@ -278,14 +274,14 @@ export default function App() {
             </div>
           </AsciiBox>
 
-          {/* 实时抓包 (显示审核文字) */}
+          {/* 实时抓包 */}
           <AsciiBox title="LIVE_SNIFFER" className="h-44">
             <LiveSniffer />
           </AsciiBox>
         </div>
 
-        {/* 核心操作 */}
-        <div className="w-full max-w-sm flex flex-col items-center space-y-6">
+        {/* 核心操作区域 */}
+        <div className="w-full max-w-sm flex flex-col items-center space-y-4">
           <button
             onClick={() =>
               window.alert("Redirecting to GitHub Authorization...")
@@ -298,12 +294,19 @@ export default function App() {
             <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
           </button>
 
-          <div className="flex space-x-8 opacity-30 text-[9px] uppercase tracking-widest font-bold">
+          {/* 这里是您之前没看到的文字 - 核心补充 */}
+          <div className="text-center">
+            <p className="text-[9px] text-[#00FF41]/60 uppercase tracking-widest font-bold">
+              Connect with GitHub // Enter the System
+            </p>
+          </div>
+
+          <div className="flex space-x-8 opacity-20 text-[9px] uppercase tracking-widest pt-4">
             <span className="hover:text-white cursor-pointer transition-colors">
               Manifesto
             </span>
             <span className="hover:text-white cursor-pointer transition-colors">
-              Documentation
+              Docs
             </span>
             <span className="hover:text-white cursor-pointer transition-colors">
               Security
