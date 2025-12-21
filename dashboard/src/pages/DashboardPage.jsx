@@ -14,6 +14,7 @@ import { ActivityHeatmap } from "../ui/matrix-a/components/ActivityHeatmap.jsx";
 import { BootScreen } from "../ui/matrix-a/components/BootScreen.jsx";
 import { IdentityCard } from "../ui/matrix-a/components/IdentityCard.jsx";
 import { MatrixButton } from "../ui/matrix-a/components/MatrixButton.jsx";
+import { TypewriterText } from "../ui/matrix-a/components/TypewriterText.jsx";
 import { TrendMonitor } from "../ui/matrix-a/components/TrendMonitor.jsx";
 import { UsagePanel } from "../ui/matrix-a/components/UsagePanel.jsx";
 import { MatrixShell } from "../ui/matrix-a/layout/MatrixShell.jsx";
@@ -185,6 +186,48 @@ export function DashboardPage({ baseUrl, auth, signedIn, signOut }) {
   const installSyncCmd = isLocalhost
     ? "node bin/tracker.js sync"
     : "npx --yes @vibescore/tracker sync";
+  const installSeenKey = "vibescore.dashboard.install.seen.v1";
+  const [installSeen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      return window.localStorage.getItem(installSeenKey) === "1";
+    } catch (_e) {
+      return false;
+    }
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (installSeen) return;
+    try {
+      window.localStorage.setItem(installSeenKey, "1");
+    } catch (_e) {
+      // ignore write errors (quota/private mode)
+    }
+  }, [installSeen, installSeenKey]);
+  const installIsEmpty = daily.length === 0;
+  const shouldAnimateInstall = installIsEmpty || !installSeen;
+  const installHeadline = ">> START_HERE: INSTALL_CLI";
+  const installHeadlineDelayMs = 240;
+  const installHeadlineSpeedMs = 45;
+  const installBodySpeedMs = 48;
+  const installBodyDelayMs =
+    installHeadlineDelayMs + installHeadline.length * installHeadlineSpeedMs + 240;
+  const installSegments = useMemo(
+    () => [
+      { text: "1) run " },
+      {
+        text: installInitCmd,
+        className: "px-1 py-0.5 bg-black/40 border border-[#00FF41]/20",
+      },
+      { text: "\n2) use Codex CLI normally\n3) run " },
+      {
+        text: installSyncCmd,
+        className: "px-1 py-0.5 bg-black/40 border border-[#00FF41]/20",
+      },
+      { text: " (or wait for auto sync)" },
+    ],
+    [installInitCmd, installSyncCmd]
+  );
 
   const redirectUrl = useMemo(() => `${window.location.origin}/auth/callback`, []);
   const signInUrl = useMemo(
@@ -288,21 +331,24 @@ export function DashboardPage({ baseUrl, auth, signedIn, signOut }) {
               </AsciiBox>
             ) : null}
 
-            <AsciiBox title="Install" subtitle="CLI">
-              <p className="text-[10px] opacity-50 mt-0">
-                1) run{" "}
-                <code className="px-1 py-0.5 bg-black/40 border border-[#00FF41]/20">
-                  {installInitCmd}
-                </code>
-                <br />
-                2) use Codex CLI normally
-                <br />
-                3) run{" "}
-                <code className="px-1 py-0.5 bg-black/40 border border-[#00FF41]/20">
-                  {installSyncCmd}
-                </code>{" "}
-                (or wait for auto sync)
-              </p>
+            <AsciiBox title="Install" subtitle="CLI" className="relative">
+              <div className="text-[9px] uppercase tracking-[0.25em] font-black text-[#00FF41]">
+                <TypewriterText
+                  text={installHeadline}
+                  startDelayMs={installHeadlineDelayMs}
+                  speedMs={installHeadlineSpeedMs}
+                  cursor={false}
+                  active={shouldAnimateInstall}
+                />
+              </div>
+              <TypewriterText
+                className="text-[10px] opacity-50 mt-2 whitespace-pre"
+                segments={installSegments}
+                startDelayMs={installBodyDelayMs}
+                speedMs={installBodySpeedMs}
+                cursor={false}
+                active={shouldAnimateInstall}
+              />
             </AsciiBox>
 
             <AsciiBox
