@@ -11,3 +11,4 @@
 验证记录：
 - 2025-12-22：`npm run build:insforge`（输出：Built 12 InsForge edge functions into `insforge-functions/`）
 - 2025-12-22：`node scripts/acceptance/run-acceptance.cjs --pretty`（20/20 通过）
+- 2025-12-22：趋势展示逻辑按本地日历对齐（week Monday start；future 截断以本地 day 为准）。

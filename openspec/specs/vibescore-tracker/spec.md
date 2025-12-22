@@ -116,14 +116,22 @@ The dashboard UI SHALL provide a short, visual-only boot screen inspired by `cop
 ### Requirement: Dashboard provides a GitHub-inspired activity heatmap
 The dashboard UI SHALL render an activity heatmap derived from daily token usage, inspired by GitHub contribution graphs.
 
-#### Scenario: Heatmap is derived from UTC daily totals
+#### Scenario: Heatmap is derived from local daily totals when timezone parameters are provided
 - **GIVEN** the user is signed in
-- **WHEN** the dashboard fetches daily totals for a rolling range (e.g., last 52 weeks)
-- **THEN** the UI SHALL derive heatmap intensity levels (0..4) from `total_tokens` per UTC day
+- **WHEN** the dashboard fetches daily totals for a rolling range (e.g., last 52 weeks) with `tz`/`tz_offset_minutes`
+- **THEN** the UI SHALL derive heatmap intensity levels (0..4) from `total_tokens` per local day
 - **AND** missing days SHALL be treated as zero activity
 
+### Requirement: Dashboard surfaces timezone basis for usage data
+The dashboard SHALL display the timezone basis used by usage aggregates, and MUST keep the label consistent with the parameters sent to usage endpoints.
+
+#### Scenario: User sees timezone basis label
+- **GIVEN** the dashboard requests usage data with or without `tz`/`tz_offset_minutes`
+- **WHEN** the user views the usage panels or activity heatmap
+- **THEN** the UI SHALL show a visible label indicating the aggregate timezone basis
+
 ### Requirement: Dashboard does not support custom date filters
-The dashboard UI MUST NOT provide arbitrary date range inputs. It SHALL only allow selecting a fixed `period` of `day`, `week` (Sunday start, UTC), `month`, or `total`.
+The dashboard UI MUST NOT provide arbitrary date range inputs. It SHALL only allow selecting a fixed `period` of `day`, `week` (Monday start, local calendar), `month`, or `total`.
 
 #### Scenario: User can only switch predefined periods
 - **GIVEN** the user is signed in
@@ -132,12 +140,12 @@ The dashboard UI MUST NOT provide arbitrary date range inputs. It SHALL only all
 - **AND** the UI SHALL allow selecting only `day|week|month|total`
 
 ### Requirement: Dashboard TREND truncates future buckets
-The dashboard TREND chart SHALL NOT render the trend line into future UTC buckets that have not occurred yet, and SHALL visually distinguish "unsynced" buckets from true zero-usage buckets.
+The dashboard TREND chart SHALL NOT render the trend line into future local-calendar buckets that have not occurred yet, and SHALL visually distinguish "unsynced" buckets from true zero-usage buckets.
 
 #### Scenario: Current date does not cover full period
-- **GIVEN** the current UTC date/time is within an active period (e.g., mid-week or mid-month)
+- **GIVEN** the current local date/time is within an active period (e.g., mid-week or mid-month)
 - **WHEN** the dashboard renders the TREND chart for that period
-- **THEN** the trend line SHALL render only through the last available UTC bucket
+- **THEN** the trend line SHALL render only through the last available local bucket
 - **AND** future buckets SHALL remain without a line
 
 #### Scenario: Unsynced buckets show missing markers
@@ -229,3 +237,21 @@ When debug mode is enabled, the CLI SHALL surface backend status and error code 
 - **WHEN** `npx --yes @vibescore/tracker sync` encounters a backend error
 - **THEN** stderr SHALL include `Status:` and `Code:` when available
 
+### Requirement: Dashboard compositing effects are GPU-budgeted
+The dashboard SHALL avoid `backdrop-filter` on large layout containers and SHALL limit heavy glow shadows to small accent elements, to reduce idle GPU spikes.
+
+#### Scenario: Large containers avoid backdrop-filter
+- **WHEN** the dashboard renders primary containers (e.g., `AsciiBox`, `SystemHeader`)
+- **THEN** their computed `backdrop-filter` SHALL be `none`
+
+#### Scenario: Accents keep limited glow
+- **WHEN** the dashboard renders small accent elements (e.g., status badges)
+- **THEN** subtle glow shadows MAY remain while large panels avoid heavy shadows
+
+### Requirement: Matrix rain cost is further reduced
+The Matrix rain animation SHALL reduce internal render scale and update rate while preserving full-screen coverage.
+
+#### Scenario: Matrix rain uses reduced budget
+- **WHEN** Matrix rain is visible
+- **THEN** the internal render scale SHALL be `<= 0.5`
+- **AND** the update rate SHALL be `<= 8 fps`
