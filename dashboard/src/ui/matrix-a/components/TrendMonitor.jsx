@@ -13,6 +13,7 @@ export function TrendMonitor({
   to,
   period,
   timeZoneLabel,
+  showTimeZoneLabel = true,
 }) {
   const series = Array.isArray(rows) && rows.length ? rows : null;
   const fallbackValues = data.length > 0 ? data : Array.from({ length: 24 }, () => 0);
@@ -127,7 +128,7 @@ export function TrendMonitor({
 
   function buildXAxisLabels() {
     if (period === "day") {
-      const tzSuffix = timeZoneLabel ? ` ${timeZoneLabel}` : "";
+      const tzSuffix = showTimeZoneLabel && timeZoneLabel ? ` ${timeZoneLabel}` : "";
       return [
         copy("trend.monitor.fallback.hour_00"),
         copy("trend.monitor.fallback.hour_06"),
@@ -192,21 +193,22 @@ export function TrendMonitor({
     const isoHour = /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z?$/;
     const isoDay = /^\\d{4}-\\d{2}-\\d{2}$/;
     const isoMonth = /^\\d{4}-\\d{2}$/;
-    const tzLabel = timeZoneLabel || copy("trend.monitor.tooltip.utc");
+    const tzLabel = showTimeZoneLabel ? timeZoneLabel || copy("trend.monitor.tooltip.utc") : "";
 
     if (isoHour.test(label)) {
       const [date, time] = label.split("T");
       const hh = time.slice(0, 2);
-      return copy("trend.monitor.tooltip.hour", {
-        date,
-        hour: hh,
-        tz: tzLabel,
-      });
+      if (!showTimeZoneLabel) {
+        return copy("trend.monitor.tooltip.hour_no_tz", { date, hour: hh });
+      }
+      return copy("trend.monitor.tooltip.hour", { date, hour: hh, tz: tzLabel });
     }
     if (isoDay.test(label)) {
+      if (!showTimeZoneLabel) return copy("trend.monitor.tooltip.day_no_tz", { date: label });
       return copy("trend.monitor.tooltip.day", { date: label, tz: tzLabel });
     }
     if (isoMonth.test(label)) {
+      if (!showTimeZoneLabel) return copy("trend.monitor.tooltip.month_no_tz", { date: label });
       return copy("trend.monitor.tooltip.month", { date: label, tz: tzLabel });
     }
     return label;

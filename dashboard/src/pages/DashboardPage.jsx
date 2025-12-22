@@ -487,6 +487,7 @@ export function DashboardPage({ baseUrl, auth, signedIn, signOut }) {
               to={trendTo}
               period={period}
               timeZoneLabel={trendTimeZoneLabel}
+              showTimeZoneLabel={false}
             />
 
             {period !== "total" ? (

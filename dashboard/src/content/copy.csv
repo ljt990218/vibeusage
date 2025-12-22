@@ -131,6 +131,9 @@ trend.monitor.tooltip.tokens,ui,TrendMonitor,TrendMonitor,tooltip_tokens,"tokens
 trend.monitor.tooltip.hour,ui,TrendMonitor,TrendMonitor,tooltip_hour,"{{date}} {{hour}}:00 {{tz}}",,active
 trend.monitor.tooltip.day,ui,TrendMonitor,TrendMonitor,tooltip_day,"{{date}} {{tz}}",,active
 trend.monitor.tooltip.month,ui,TrendMonitor,TrendMonitor,tooltip_month,"{{date}} {{tz}}",,active
+trend.monitor.tooltip.hour_no_tz,ui,TrendMonitor,TrendMonitor,tooltip_hour_no_tz,"{{date}} {{hour}}:00",,active
+trend.monitor.tooltip.day_no_tz,ui,TrendMonitor,TrendMonitor,tooltip_day_no_tz,"{{date}}",,active
+trend.monitor.tooltip.month_no_tz,ui,TrendMonitor,TrendMonitor,tooltip_month_no_tz,"{{date}}",,active
 trend.monitor.tooltip.value,ui,TrendMonitor,TrendMonitor,tooltip_value,"{{value}} {{unit}}",,active
 trend.monitor.month.jan,ui,TrendMonitor,TrendMonitor,month_label,"JAN",,active
 trend.monitor.month.feb,ui,TrendMonitor,TrendMonitor,month_label,"FEB",,active
