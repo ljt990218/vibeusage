@@ -1,9 +1,11 @@
 {
   "name": "@vibescore/tracker",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.0.2",
   "description": "Codex CLI token usage tracker (macOS-first, notify-driven).",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "commonjs",
   "scripts": {
     "test": "node --test test/*.test.js",
@@ -22,6 +24,12 @@
     "tracker": "bin/tracker.js",
     "vibescore-tracker": "bin/tracker.js"
   },
+  "files": [
+    "bin/",
+    "src/",
+    "LICENSE",
+    "README.md"
+  ],
   "engines": {
     "node": ">=18"
   },

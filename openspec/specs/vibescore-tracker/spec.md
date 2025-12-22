@@ -11,6 +11,13 @@ The system SHALL provide a CLI package `@vibescore/tracker` with commands `init`
 - **WHEN** a user runs `npx @vibescore/tracker --help`
 - **THEN** the output SHALL include `init`, `sync`, `status`, and `uninstall`
 
+### Requirement: Public npm distribution for CLI
+The system SHALL publish `@vibescore/tracker` to the public npm registry so users can run `npx --yes @vibescore/tracker <command>` without npm authentication.
+
+#### Scenario: Public install via npx
+- **WHEN** a user runs `npx --yes @vibescore/tracker --help` in a clean npm environment
+- **THEN** the package SHALL download successfully and print CLI help without `404` or `403` errors
+
 ### Requirement: Notify hook install is safe and reversible
 The system MUST configure Codex CLI `notify` without breaking existing user configuration, and MUST support restoring the previous `notify` configuration.
 
