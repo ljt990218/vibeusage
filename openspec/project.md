@@ -174,3 +174,10 @@
 - **单一事实来源**：本项目页面上所有展示文字，必须由 `dashboard/src/content/copy.csv` 统一管理。
 - **改动汇总**：任何页面文案变更都必须先更新文案表，禁止在组件内硬编码新文案。
 - **双向同步**：文案表与项目官网内容必须保持一致；官网文案改动必须回写到表内，表内更新也必须同步到官网。
+- **变更流程（必须遵守）**：
+  1. 先从官方基线拉取并核对：`node scripts/copy-sync.cjs pull --dry-run`（必要时 `--apply`）
+  2. 再修改 `dashboard/src/content/copy.csv` 与本地代码（如组件/页面）
+  3. 校验注册表：`node scripts/validate-copy-registry.cjs`
+  4. 推送到远端：
+     - 仅 `copy.csv` 改动：`node scripts/copy-sync.cjs push --confirm --push-remote`
+     - 含代码改动：`git add` → `git commit` → `git push`

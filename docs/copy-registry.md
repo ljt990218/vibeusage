@@ -41,6 +41,19 @@ npm run validate:copy
 node scripts/validate-copy-registry.cjs
 ```
 
+## 强制工作流（文案变更）
+
+为了避免远端/本地文案不一致，所有文案变更必须按以下顺序：
+
+1. 先拉取官方基线（`origin/main`）并核对差异  
+   `node scripts/copy-sync.cjs pull --dry-run`（需要覆盖时用 `--apply`）
+2. 再修改 `copy.csv` 与本地代码（页面/组件）  
+3. 运行校验  
+   `node scripts/validate-copy-registry.cjs`
+4. 推送到远端  
+   - 仅 `copy.csv` 变更：`node scripts/copy-sync.cjs push --confirm --push-remote`  
+   - 含代码变更：`git add` → `git commit` → `git push`
+
 ## 同步流程（origin/main 作为官方基线）
 
 官方来源：`origin/main:dashboard/src/content/copy.csv`
