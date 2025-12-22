@@ -514,7 +514,7 @@ export function DashboardPage({ baseUrl, auth, signedIn, signOut }) {
                   tabIndex={0}
                 >
                   <table className="w-full border-collapse">
-                    <thead className="sticky top-0 bg-black/90 backdrop-blur">
+                    <thead className="sticky top-0 bg-black/90">
                       <tr className="border-b border-[#00FF41]/10">
                         {DAILY_SORT_COLUMNS.map((c) => (
                           <th

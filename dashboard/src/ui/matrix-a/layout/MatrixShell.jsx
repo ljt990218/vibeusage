@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 
 import { MatrixRain } from "../components/MatrixRain.jsx";
 import { copy } from "../../../lib/copy.js";
@@ -10,16 +10,9 @@ export function MatrixShell({
   footerLeft,
   footerRight,
 }) {
-  const reduceMotion = useMemo(() => {
-    return Boolean(
-      window.matchMedia &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    );
-  }, []);
-
   return (
     <div className="min-h-screen bg-[#050505] text-[#00FF41] font-mono p-4 md:p-8 flex flex-col leading-tight text-[11px] md:text-[12px] selection:bg-[#00FF41] selection:text-black overflow-hidden">
-      {!reduceMotion ? <MatrixRain /> : null}
+      <MatrixRain />
       <div className="pointer-events-none fixed inset-0 z-50 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.06)_50%)] bg-[length:100%_4px] opacity-20"></div>
 
       <div className="relative z-10 flex flex-col min-h-screen">

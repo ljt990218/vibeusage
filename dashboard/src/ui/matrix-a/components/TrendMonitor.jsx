@@ -424,7 +424,7 @@ export function TrendMonitor({
           ))}
         </svg>
 
-        <div className="absolute right-0 top-0 bottom-0 flex flex-col justify-between py-1 px-1 text-[7px] font-mono text-[#00FF41]/60 pointer-events-none bg-black/60 backdrop-blur-[1px] border-l border-white/5 w-8 text-right">
+        <div className="absolute right-0 top-0 bottom-0 flex flex-col justify-between py-1 px-1 text-[7px] font-mono text-[#00FF41]/60 pointer-events-none bg-black/70 border-l border-white/5 w-8 text-right">
           <span>{formatCompact(max)}</span>
           <span>{formatCompact(max * 0.75)}</span>
           <span>{formatCompact(max * 0.5)}</span>

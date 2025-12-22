@@ -12,7 +12,7 @@ const CHARS = {
 export function AsciiBox({ title, subtitle, children, className = "" }) {
   return (
     <div
-      className={`relative flex flex-col bg-black/80 backdrop-blur-md border border-[#00FF41]/10 shadow-2xl ${className}`}
+      className={`relative flex flex-col bg-black/90 border border-[#00FF41]/10 ${className}`}
     >
       <div className="flex items-center leading-none">
         <span className="shrink-0 text-[#00FF41]/30">{CHARS.TOP_LEFT}</span>

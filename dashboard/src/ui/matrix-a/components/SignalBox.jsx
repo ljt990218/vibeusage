@@ -8,7 +8,7 @@ import { copy } from "../../../lib/copy.js";
  */
 export const SignalBox = ({ title = copy("signalbox.title_default"), children, className = "" }) => (
   <div
-    className={`relative flex flex-col bg-black/90 border border-[#00FF41]/30 shadow-2xl ${className}`}
+    className={`relative flex flex-col bg-black/90 border border-[#00FF41]/30 ${className}`}
   >
     <div className="flex items-center text-[#00FF41] leading-none text-[10px] p-1 border-b border-[#00FF41]/20">
       <span className="font-black bg-[#00FF41]/10 px-2 py-0.5 border border-[#00FF41]/30 mr-2">
