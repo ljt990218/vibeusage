@@ -11,3 +11,6 @@
 - [x] 3.1 `npm view @vibescore/tracker version` 输出 `0.0.3`
 - [x] 3.2 `npx --yes @vibescore/tracker --help` 可用
 - [x] 3.3 `VIBESCORE_DEBUG=1 npx --yes @vibescore/tracker sync` 输出包含 `Status`/`Code`
+
+证据：
+- 2025-12-22 用户确认已完成发布与验证（未提供日志）。
