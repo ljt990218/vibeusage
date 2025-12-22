@@ -65,6 +65,13 @@ export function DashboardPage({ baseUrl, auth, signedIn, signOut }) {
     () => `Local time (${timeZoneShortLabel})`,
     [timeZoneShortLabel]
   );
+  const trendTimeZone = period === "day" ? "UTC" : timeZone;
+  const trendTzOffsetMinutes = period === "day" ? 0 : tzOffsetMinutes;
+  const trendTimeZoneLabel = useMemo(
+    () =>
+      period === "day" ? copy("trend.monitor.tooltip.utc") : timeZoneLabel,
+    [period, timeZoneLabel]
+  );
 
   const {
     daily,
@@ -100,8 +107,8 @@ export function DashboardPage({ baseUrl, auth, signedIn, signOut }) {
     to,
     months: 24,
     cacheKey: auth?.userId || auth?.email || "default",
-    timeZone,
-    tzOffsetMinutes,
+    timeZone: trendTimeZone,
+    tzOffsetMinutes: trendTzOffsetMinutes,
     sharedRows: shareDailyToTrend ? daily : null,
     sharedRange: shareDailyToTrend ? { from, to } : null,
   });
@@ -287,7 +294,7 @@ export function DashboardPage({ baseUrl, auth, signedIn, signOut }) {
         text: installSyncCmd,
         className: "px-1 py-0.5 bg-black/40 border border-[#00FF41]/20",
       },
-      { text: ` ${copy("dashboard.install.step3_suffix")}` },
+      { text: copy("dashboard.install.step3_suffix") },
     ],
     [installInitCmd, installSyncCmd]
   );
@@ -483,7 +490,7 @@ export function DashboardPage({ baseUrl, auth, signedIn, signOut }) {
               from={trendFrom}
               to={trendTo}
               period={period}
-              timeZoneLabel={timeZoneLabel}
+              timeZoneLabel={trendTimeZoneLabel}
             />
 
             {period !== "total" ? (
