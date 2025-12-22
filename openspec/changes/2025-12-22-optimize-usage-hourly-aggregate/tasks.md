@@ -6,3 +6,6 @@
 ## 2. Verification
 - [x] 2.1 新增 acceptance 脚本覆盖聚合成功与回退路径。
 - [x] 2.2 运行 acceptance 脚本并记录结果。
+
+证据：
+- 2025-12-22 运行 `node scripts/acceptance/usage-hourly-aggregate.cjs`，输出 `ok: true`。
