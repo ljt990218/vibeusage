@@ -266,10 +266,11 @@ export function DashboardPage({ baseUrl, auth, signedIn, signOut }) {
     ]
   );
 
-  const summaryCostValue = useMemo(
-    () => formatUsdCurrency(summary?.total_cost_usd),
-    [summary?.total_cost_usd]
-  );
+  const summaryCostValue = useMemo(() => {
+    const formatted = formatUsdCurrency(summary?.total_cost_usd);
+    if (!formatted || formatted === "-" || formatted.startsWith("$")) return formatted;
+    return `$${formatted}`;
+  }, [summary?.total_cost_usd]);
 
   const isLocalhost = useMemo(() => {
     const h = window.location.hostname;
