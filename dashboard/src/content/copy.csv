@@ -213,8 +213,10 @@ dashboard.install.title,dashboard,DashboardPage,AsciiBox,title,"Install",,active
 dashboard.install.subtitle,dashboard,DashboardPage,AsciiBox,subtitle,"CLI",,active
 dashboard.install.headline,dashboard,DashboardPage,AsciiBox,headline,">> START_HERE: INSTALL_CLI",,active
 dashboard.install.step1,dashboard,DashboardPage,AsciiBox,install_step,"1) run",,active
+dashboard.install.cmd.init,dashboard,DashboardPage,AsciiBox,install_cmd,"npx --yes @vibescore/tracker init",,active
 dashboard.install.step2,dashboard,DashboardPage,AsciiBox,install_step,"2) use Codex CLI normally",,active
 dashboard.install.step3,dashboard,DashboardPage,AsciiBox,install_step,"3) wait for auto sync (or run",,active
+dashboard.install.cmd.sync,dashboard,DashboardPage,AsciiBox,install_cmd,"npx --yes @vibescore/tracker sync",,active
 dashboard.install.step3_suffix,dashboard,DashboardPage,AsciiBox,install_step_suffix,")",,active
 
 dashboard.activity.title,dashboard,DashboardPage,AsciiBox,title,"Activity_Grid",,active

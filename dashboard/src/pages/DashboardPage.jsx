@@ -344,16 +344,8 @@ export function DashboardPage({ baseUrl, auth, signedIn, signOut }) {
     return `$${formatted}`;
   }, [summary?.total_cost_usd]);
 
-  const isLocalhost = useMemo(() => {
-    const h = window.location.hostname;
-    return h === "localhost" || h === "127.0.0.1";
-  }, []);
-  const installInitCmd = isLocalhost
-    ? "node bin/tracker.js init"
-    : "npx --yes @vibescore/tracker init";
-  const installSyncCmd = isLocalhost
-    ? "node bin/tracker.js sync"
-    : "npx --yes @vibescore/tracker sync";
+  const installInitCmd = copy("dashboard.install.cmd.init");
+  const installSyncCmd = copy("dashboard.install.cmd.sync");
   const installSeenKey = "vibescore.dashboard.install.seen.v1";
   const [installSeen] = useState(() => {
     if (typeof window === "undefined") return true;
