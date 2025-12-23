@@ -5,6 +5,8 @@
 **QUANTIFY YOUR AI OUTPUT**  
 _Real-time AI Analytics for Codex CLI_
 
+[**www.vibescore.space**](https://www.vibescore.space)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Support](https://img.shields.io/badge/Node.js-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
 [![Platform](https://img.shields.io/badge/Platform-macOS-lightgrey.svg)](https://www.apple.com/macos/)
