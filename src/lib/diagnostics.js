@@ -18,12 +18,14 @@ async function collectTrackerDiagnostics({
   const notifySignalPath = path.join(trackerDir, 'notify.signal');
   const throttlePath = path.join(trackerDir, 'sync.throttle');
   const uploadThrottlePath = path.join(trackerDir, 'upload.throttle.json');
+  const autoRetryPath = path.join(trackerDir, 'auto.retry.json');
   const codexConfigPath = path.join(codexHome, 'config.toml');
 
   const config = await readJson(configPath);
   const cursors = await readJson(cursorsPath);
   const queueState = (await readJson(queueStatePath)) || { offset: 0 };
   const uploadThrottle = normalizeUploadState(await readJson(uploadThrottlePath));
+  const autoRetry = await readJson(autoRetryPath);
 
   const queueSize = await safeStatSize(queuePath);
   const offsetBytes = Number(queueState.offset || 0);
@@ -37,6 +39,7 @@ async function collectTrackerDiagnostics({
   const codexNotify = notifyConfigured ? codexNotifyRaw.map((v) => redactValue(v, home)) : null;
 
   const lastSuccessAt = uploadThrottle.lastSuccessMs ? new Date(uploadThrottle.lastSuccessMs).toISOString() : null;
+  const autoRetryAt = parseEpochMsToIso(autoRetry?.retryAtMs);
 
   return {
     ok: true,
@@ -84,7 +87,18 @@ async function collectTrackerDiagnostics({
             message: redactError(String(uploadThrottle.lastError), home)
           }
         : null
-    }
+    },
+    auto_retry: autoRetryAt
+      ? {
+          next_retry_at: autoRetryAt,
+          reason: typeof autoRetry?.reason === 'string' ? autoRetry.reason : null,
+          pending_bytes: Number.isFinite(Number(autoRetry?.pendingBytes))
+            ? Math.max(0, Number(autoRetry.pendingBytes))
+            : null,
+          scheduled_at: typeof autoRetry?.scheduledAt === 'string' ? autoRetry.scheduledAt : null,
+          source: typeof autoRetry?.source === 'string' ? autoRetry.source : null
+        }
+      : null
   };
 }
 
@@ -135,4 +149,3 @@ function parseEpochMsToIso(v) {
 }
 
 module.exports = { collectTrackerDiagnostics };
-

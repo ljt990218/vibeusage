@@ -1,6 +1,7 @@
 const os = require('node:os');
 const path = require('node:path');
 const fs = require('node:fs/promises');
+const cp = require('node:child_process');
 
 const { ensureDir, readJson, writeJson, openLock } = require('../lib/fs');
 const { listRolloutFiles, parseRolloutIncremental } = require('../lib/rollout');
@@ -39,6 +40,7 @@ async function cmdSync(argv) {
     const config = await readJson(configPath);
     const cursors = (await readJson(cursorsPath)) || { version: 1, files: {}, updatedAt: null };
     const uploadThrottle = normalizeUploadState(await readJson(uploadThrottlePath));
+    let uploadThrottleState = uploadThrottle;
 
     const codexHome = process.env.CODEX_HOME || path.join(home, '.codex');
     const sessionsDir = path.join(codexHome, 'sessions');
@@ -72,6 +74,7 @@ async function cmdSync(argv) {
     const baseUrl = config?.baseUrl || process.env.VIBESCORE_INSFORGE_BASE_URL || 'https://5tmappuk.us-east.insforge.app';
 
     let uploadResult = null;
+    let uploadAttempted = false;
     if (deviceToken) {
       const beforeState = (await readJson(queueStatePath)) || { offset: 0 };
       const queueSize = await safeStatSize(queuePath);
@@ -79,16 +82,27 @@ async function cmdSync(argv) {
       let maxBatches = opts.auto ? 3 : opts.drain ? 10_000 : 10;
       let batchSize = UPLOAD_DEFAULTS.batchSize;
       let allowUpload = pendingBytes > 0;
+      let autoDecision = null;
 
       if (opts.auto) {
-        const decision = decideAutoUpload({
+        autoDecision = decideAutoUpload({
           nowMs: Date.now(),
           pendingBytes,
           state: uploadThrottle
         });
-        allowUpload = allowUpload && decision.allowed;
-        maxBatches = decision.allowed ? decision.maxBatches : 0;
-        batchSize = decision.batchSize;
+        allowUpload = allowUpload && autoDecision.allowed;
+        maxBatches = autoDecision.allowed ? autoDecision.maxBatches : 0;
+        batchSize = autoDecision.batchSize;
+        if (!autoDecision.allowed && pendingBytes > 0 && autoDecision.blockedUntilMs > 0) {
+          const reason = deriveAutoSkipReason({ decision: autoDecision, state: uploadThrottle });
+          await scheduleAutoRetry({
+            trackerDir,
+            retryAtMs: autoDecision.blockedUntilMs,
+            reason,
+            pendingBytes,
+            source: 'auto-throttled'
+          });
+        }
       }
 
       if (progress?.enabled && pendingBytes > 0 && allowUpload) {
@@ -99,6 +113,7 @@ async function cmdSync(argv) {
       }
 
       if (allowUpload && maxBatches > 0) {
+        uploadAttempted = true;
         try {
           uploadResult = await drainQueueToCloud({
             baseUrl,
@@ -118,12 +133,26 @@ async function cmdSync(argv) {
             }
           });
           if (uploadResult.attempted > 0) {
-            const next = recordUploadSuccess({ nowMs: Date.now(), state: uploadThrottle });
+            const next = recordUploadSuccess({ nowMs: Date.now(), state: uploadThrottleState });
+            uploadThrottleState = next;
             await writeJson(uploadThrottlePath, next);
           }
         } catch (e) {
-          const next = recordUploadFailure({ nowMs: Date.now(), state: uploadThrottle, error: e });
+          const next = recordUploadFailure({ nowMs: Date.now(), state: uploadThrottleState, error: e });
+          uploadThrottleState = next;
           await writeJson(uploadThrottlePath, next);
+          if (opts.auto && pendingBytes > 0) {
+            const retryAtMs = Math.max(next.nextAllowedAtMs || 0, next.backoffUntilMs || 0);
+            if (retryAtMs > 0) {
+              await scheduleAutoRetry({
+                trackerDir,
+                retryAtMs,
+                reason: 'backoff',
+                pendingBytes,
+                source: 'auto-error'
+              });
+            }
+          }
           throw e;
         }
       } else {
@@ -136,6 +165,21 @@ async function cmdSync(argv) {
     const afterState = (await readJson(queueStatePath)) || { offset: 0 };
     const queueSize = await safeStatSize(queuePath);
     const pendingBytes = Math.max(0, queueSize - Number(afterState.offset || 0));
+
+    if (pendingBytes <= 0) {
+      await clearAutoRetry(trackerDir);
+    } else if (opts.auto && uploadAttempted) {
+      const retryAtMs = Number(uploadThrottleState?.nextAllowedAtMs || 0);
+      if (retryAtMs > Date.now()) {
+        await scheduleAutoRetry({
+          trackerDir,
+          retryAtMs,
+          reason: 'backlog',
+          pendingBytes,
+          source: 'auto-backlog'
+        });
+      }
+    }
 
     await maybeSendHeartbeat({
       baseUrl,
@@ -174,12 +218,14 @@ function parseArgs(argv) {
   const out = {
     auto: false,
     fromNotify: false,
+    fromRetry: false,
     drain: false
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--auto') out.auto = true;
     else if (a === '--from-notify') out.fromNotify = true;
+    else if (a === '--from-retry') out.fromRetry = true;
     else if (a === '--drain') out.drain = true;
     else throw new Error(`Unknown option: ${a}`);
   }
@@ -219,5 +265,103 @@ async function maybeSendHeartbeat({ baseUrl, deviceToken, trackerDir, uploadResu
   }
 }
 
+function deriveAutoSkipReason({ decision, state }) {
+  if (!decision || decision.reason !== 'throttled') return decision?.reason || 'unknown';
+  const backoffUntilMs = Number(state?.backoffUntilMs || 0);
+  const nextAllowedAtMs = Number(state?.nextAllowedAtMs || 0);
+  if (backoffUntilMs > 0 && backoffUntilMs >= nextAllowedAtMs) return 'backoff';
+  return 'throttled';
+}
+
+async function scheduleAutoRetry({ trackerDir, retryAtMs, reason, pendingBytes, source }) {
+  const retryMs = coerceRetryMs(retryAtMs);
+  if (!retryMs) return { scheduled: false, retryAtMs: 0 };
+
+  const retryPath = path.join(trackerDir, AUTO_RETRY_FILENAME);
+  const nowMs = Date.now();
+  const existing = await readJson(retryPath);
+  const existingMs = coerceRetryMs(existing?.retryAtMs);
+  if (existingMs && existingMs >= retryMs - 1000) {
+    return { scheduled: false, retryAtMs: existingMs };
+  }
+
+  const payload = {
+    version: 1,
+    retryAtMs: retryMs,
+    retryAt: new Date(retryMs).toISOString(),
+    reason: typeof reason === 'string' && reason.length > 0 ? reason : 'throttled',
+    pendingBytes: Math.max(0, Number(pendingBytes || 0)),
+    scheduledAt: new Date(nowMs).toISOString(),
+    source: typeof source === 'string' ? source : 'auto'
+  };
+
+  await writeJson(retryPath, payload);
+
+  const delayMs = Math.min(AUTO_RETRY_MAX_DELAY_MS, Math.max(0, retryMs - nowMs));
+  if (delayMs <= 0) return { scheduled: false, retryAtMs: retryMs };
+  if (process.env.VIBESCORE_AUTO_RETRY_NO_SPAWN === '1') {
+    return { scheduled: false, retryAtMs: retryMs };
+  }
+
+  spawnAutoRetryProcess({
+    retryPath,
+    trackerBinPath: path.join(trackerDir, 'app', 'bin', 'tracker.js'),
+    fallbackPkg: '@vibescore/tracker',
+    delayMs
+  });
+  return { scheduled: true, retryAtMs: retryMs };
+}
+
+async function clearAutoRetry(trackerDir) {
+  const retryPath = path.join(trackerDir, AUTO_RETRY_FILENAME);
+  await fs.unlink(retryPath).catch(() => {});
+}
+
+function spawnAutoRetryProcess({ retryPath, trackerBinPath, fallbackPkg, delayMs }) {
+  const script = buildAutoRetryScript({ retryPath, trackerBinPath, fallbackPkg, delayMs });
+  try {
+    const child = cp.spawn(process.execPath, ['-e', script], {
+      detached: true,
+      stdio: 'ignore',
+      env: process.env
+    });
+    child.unref();
+  } catch (_e) {}
+}
+
+function buildAutoRetryScript({ retryPath, trackerBinPath, fallbackPkg, delayMs }) {
+  return `'use strict';\n` +
+    `const fs = require('node:fs');\n` +
+    `const cp = require('node:child_process');\n` +
+    `const retryPath = ${JSON.stringify(retryPath)};\n` +
+    `const trackerBinPath = ${JSON.stringify(trackerBinPath)};\n` +
+    `const fallbackPkg = ${JSON.stringify(fallbackPkg)};\n` +
+    `const delayMs = ${Math.max(0, Math.floor(delayMs || 0))};\n` +
+    `setTimeout(() => {\n` +
+    `  let retryAtMs = 0;\n` +
+    `  try {\n` +
+    `    const raw = fs.readFileSync(retryPath, 'utf8');\n` +
+    `    retryAtMs = Number(JSON.parse(raw).retryAtMs || 0);\n` +
+    `  } catch (_) {}\n` +
+    `  if (!retryAtMs || Date.now() + 1000 < retryAtMs) process.exit(0);\n` +
+    `  const argv = ['sync', '--auto', '--from-retry'];\n` +
+    `  const cmd = fs.existsSync(trackerBinPath)\n` +
+    `    ? [process.execPath, trackerBinPath, ...argv]\n` +
+    `    : ['npx', '--yes', fallbackPkg, ...argv];\n` +
+    `  try {\n` +
+    `    const child = cp.spawn(cmd[0], cmd.slice(1), { detached: true, stdio: 'ignore', env: process.env });\n` +
+    `    child.unref();\n` +
+    `  } catch (_) {}\n` +
+    `}, delayMs);\n`;
+}
+
+function coerceRetryMs(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.floor(n);
+}
+
 const HEARTBEAT_MIN_INTERVAL_MINUTES = 30;
 const HEARTBEAT_MIN_INTERVAL_MS = HEARTBEAT_MIN_INTERVAL_MINUTES * 60 * 1000;
+const AUTO_RETRY_FILENAME = 'auto.retry.json';
+const AUTO_RETRY_MAX_DELAY_MS = 2 * 60 * 60 * 1000;

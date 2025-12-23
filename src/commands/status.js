@@ -24,6 +24,7 @@ async function cmdStatus(argv = []) {
   const notifySignalPath = path.join(trackerDir, 'notify.signal');
   const throttlePath = path.join(trackerDir, 'sync.throttle');
   const uploadThrottlePath = path.join(trackerDir, 'upload.throttle.json');
+  const autoRetryPath = path.join(trackerDir, 'auto.retry.json');
   const codexHome = process.env.CODEX_HOME || path.join(home, '.codex');
   const codexConfigPath = path.join(codexHome, 'config.toml');
 
@@ -31,6 +32,7 @@ async function cmdStatus(argv = []) {
   const cursors = await readJson(cursorsPath);
   const queueState = (await readJson(queueStatePath)) || { offset: 0 };
   const uploadThrottle = normalizeUploadState(await readJson(uploadThrottlePath));
+  const autoRetry = await readJson(autoRetryPath);
 
   const queueSize = await safeStatSize(queuePath);
   const pendingBytes = Math.max(0, queueSize - (queueState.offset || 0));
@@ -51,6 +53,12 @@ async function cmdStatus(argv = []) {
   const lastUploadError = uploadThrottle.lastError
     ? `${uploadThrottle.lastErrorAt || 'unknown'} ${uploadThrottle.lastError}`
     : null;
+  const autoRetryAt = parseEpochMsToIso(autoRetry?.retryAtMs || null);
+  const autoRetryLine = autoRetryAt
+    ? `- Auto retry after: ${autoRetryAt} (${autoRetry?.reason || 'scheduled'}, pending ${Number(
+        autoRetry?.pendingBytes || 0
+      )} bytes)`
+    : null;
 
   process.stdout.write(
     [
@@ -65,6 +73,7 @@ async function cmdStatus(argv = []) {
       `- Next upload after: ${nextUpload || 'never'}`,
       `- Backoff until: ${backoffUntil || 'never'}`,
       lastUploadError ? `- Last upload error: ${lastUploadError}` : null,
+      autoRetryLine,
       `- Codex notify: ${notifyConfigured ? JSON.stringify(codexNotify) : 'unset'}`,
       ''
     ]

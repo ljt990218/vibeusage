@@ -42,6 +42,25 @@ test('diagnostics redacts device token and home paths', async () => {
       'utf8'
     );
 
+    const retryAtMs = Date.now() + 60_000;
+    await fs.writeFile(
+      path.join(trackerDir, 'auto.retry.json'),
+      JSON.stringify(
+        {
+          version: 1,
+          retryAtMs,
+          retryAt: new Date(retryAtMs).toISOString(),
+          reason: 'throttled',
+          pendingBytes: 123,
+          scheduledAt: '2025-12-23T00:00:00.000Z',
+          source: 'auto'
+        },
+        null,
+        2
+      ) + '\n',
+      'utf8'
+    );
+
     let out = '';
     process.stdout.write = (chunk, enc, cb) => {
       out += typeof chunk === 'string' ? chunk : chunk.toString(enc || 'utf8');
@@ -58,6 +77,9 @@ test('diagnostics redacts device token and home paths', async () => {
     assert.equal(data?.config?.device_token, 'set');
     assert.equal(typeof data?.paths?.codex_home, 'string');
     assert.ok(String(data.paths.codex_home).startsWith('~'));
+    assert.equal(data?.auto_retry?.reason, 'throttled');
+    assert.equal(data?.auto_retry?.pending_bytes, 123);
+    assert.equal(data?.auto_retry?.next_retry_at, new Date(retryAtMs).toISOString());
   } finally {
     process.stdout.write = prevWrite;
     if (prevHome === undefined) delete process.env.HOME;
@@ -67,4 +89,3 @@ test('diagnostics redacts device token and home paths', async () => {
     await fs.rm(tmp, { recursive: true, force: true });
   }
 });
-
