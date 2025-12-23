@@ -107,7 +107,7 @@ var require_auth = __commonJS({
 // insforge-src/functions/vibescore-events-retention.js
 var { handleOptions, json, requireMethod, readJson } = require_http();
 var { getBearerToken } = require_auth();
-var { getBaseUrl, getServiceRoleKey } = require_env();
+var { getAnonKey, getBaseUrl, getServiceRoleKey } = require_env();
 var DEFAULT_DAYS = 30;
 var MAX_DAYS = 365;
 module.exports = async function(request) {
@@ -126,19 +126,22 @@ module.exports = async function(request) {
   const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1e3);
   if (!Number.isFinite(cutoff.getTime())) return json({ error: "Invalid cutoff" }, 400);
   const baseUrl = getBaseUrl();
-  const url = new URL("/api/database/rpc/vibescore_purge_events", baseUrl);
-  const res = await fetch(url.toString(), {
-    method: "POST",
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ cutoff_ts: cutoff.toISOString(), dry_run: dryRun })
+  const anonKey = getAnonKey();
+  const serviceClient = createClient({
+    baseUrl,
+    anonKey: anonKey || serviceRoleKey,
+    edgeFunctionToken: serviceRoleKey
   });
-  const { data, error } = await readApiJson(res);
-  if (!res.ok) return json({ error: error || `HTTP ${res.status}` }, res.status || 500);
-  const deleted = resolveDeletedCount(data);
+  let deleted = 0;
+  if (dryRun) {
+    const { count, error } = await serviceClient.database.from("vibescore_tracker_events").select("id", { count: "exact", head: true }).lt("token_timestamp", cutoff.toISOString());
+    if (error) return json({ error: error.message }, 500);
+    deleted = toSafeInt(count);
+  } else {
+    const { data, count, error } = await serviceClient.database.from("vibescore_tracker_events").delete({ count: "exact" }).lt("token_timestamp", cutoff.toISOString());
+    if (error) return json({ error: error.message }, 500);
+    deleted = typeof count === "number" ? count : Array.isArray(data) ? data.length : 0;
+  }
   return json(
     {
       ok: true,
@@ -150,12 +153,6 @@ module.exports = async function(request) {
     200
   );
 };
-function resolveDeletedCount(data) {
-  if (Array.isArray(data) && data.length > 0) {
-    return toSafeInt(data[0]?.deleted_count);
-  }
-  return toSafeInt(data?.deleted_count);
-}
 function toSafeInt(value) {
   const n = Number(value);
   if (!Number.isFinite(n) || n < 0) return 0;
@@ -166,14 +163,4 @@ function clampDays(value) {
   if (!Number.isFinite(n)) return DEFAULT_DAYS;
   if (n <= 0) return DEFAULT_DAYS;
   return Math.min(MAX_DAYS, Math.floor(n));
-}
-async function readApiJson(res) {
-  const text = await res.text();
-  if (!text) return { data: null, error: null };
-  try {
-    const parsed = JSON.parse(text);
-    return { data: parsed, error: parsed?.message || parsed?.error || null };
-  } catch (_e) {
-    return { data: null, error: text.slice(0, 300) };
-  }
 }
