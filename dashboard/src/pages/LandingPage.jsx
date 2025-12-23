@@ -1,5 +1,6 @@
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { DecodingText } from "../ui/matrix-a/components/DecodingText.jsx";
+import { GithubStar } from "../ui/matrix-a/components/GithubStar.jsx";
 import { copy } from "../lib/copy.js";
 
 const MatrixRain = React.lazy(() =>
@@ -72,11 +73,13 @@ export function LandingPage({ signInUrl }) {
   return (
     <div className="min-h-screen bg-[#050505] font-mono text-[#00FF41] flex flex-col items-center justify-center p-6 relative overflow-hidden">
       {/* 视觉层 */}
+      {/* 视觉层 */}
       {effectsReady ? (
         <Suspense fallback={null}>
           <MatrixRain />
         </Suspense>
       ) : null}
+      <GithubStar />
       <div className="pointer-events-none fixed inset-0 z-50 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[length:100%_4px]"></div>
 
       {/* 主面板 */}
