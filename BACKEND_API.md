@@ -48,7 +48,7 @@ When ingestion hangs or fails, use these client-side controls:
 Examples:
 
 ```bash
-VIBESCORE_HTTP_TIMEOUT_MS=60000 node bin/tracker.js sync --debug
+VIBESCORE_HTTP_TIMEOUT_MS=60000 npx --yes @vibescore/tracker sync --debug
 ```
 
 ## Client backpressure defaults

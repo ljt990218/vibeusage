@@ -3,7 +3,7 @@
 ## 1) Quick health check (recommended)
 Run:
 ```
-node bin/tracker.js status --diagnostics
+npx --yes @vibescore/tracker status --diagnostics
 ```
 
 ## 2) Interpret the output (health criteria)
