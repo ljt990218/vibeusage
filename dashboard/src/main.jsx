@@ -44,9 +44,9 @@ function ensureRichLinks() {
 
   // Twitter
   ensureMetaTag("twitter:card", null, twitterCard);
-  ensureMetaTag("twitter:title", title);
-  ensureMetaTag("twitter:description", description);
-  ensureMetaTag("twitter:image", ogImage);
+  ensureMetaTag("twitter:title", null, title);
+  ensureMetaTag("twitter:description", null, description);
+  ensureMetaTag("twitter:image", null, ogImage);
 }
 
 ensureRichLinks();
