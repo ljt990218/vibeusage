@@ -21,6 +21,10 @@ landing.hero.tagline,landing,LandingPage,LandingPage,hero_tagline,"CODEX TOKEN U
 landing.hero.subtagline,landing,LandingPage,LandingPage,hero_subtagline,"Track Codex token usage from the CLI in real time.",,active
 landing.meta.title,landing,LandingPage,Meta,title,"VibeScore | Codex Token Usage Tracker",,active
 landing.meta.description,landing,LandingPage,Meta,description,"VibeScore is a Codex token usage tracker for Codex CLI. Auto-track token usage, visualize in a Matrix-style UI, and compare on the leaderboard.",,active
+landing.meta.og_site_name,landing,LandingPage,Meta,og_site_name,"VibeScore",,active
+landing.meta.og_type,landing,LandingPage,Meta,og_type,"website",,active
+landing.meta.og_image,landing,LandingPage,Meta,og_image,"/og-image.png",,active
+landing.meta.twitter_card,landing,LandingPage,Meta,twitter_card,"summary_large_image",,active
 landing.seo.title,landing,LandingPage,LandingPage,seo_title,"Codex Token Usage, Quantified",,active
 landing.seo.summary,landing,LandingPage,LandingPage,seo_summary,"VibeScore is a token usage tracker built for Codex CLI users who want a fast, reliable view of Codex token spend.",,active
 landing.seo.point1,landing,LandingPage,LandingPage,seo_point_1,"Auto-track Codex CLI token usage with zero manual steps.",,active
