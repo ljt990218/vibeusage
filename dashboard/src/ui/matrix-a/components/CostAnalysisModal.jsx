@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 
 import { copy } from "../../../lib/copy.js";
 import { formatUsdCurrency, toFiniteNumber } from "../../../lib/format.js";
@@ -12,6 +12,15 @@ function formatUsdValue(value) {
 
 export function CostAnalysisModal({ isOpen, onClose, fleetData = [] }) {
   if (!isOpen) return null;
+
+  useEffect(() => {
+    if (typeof onClose !== "function") return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   const percentSymbol = copy("shared.unit.percent");
   const calcPrefix = copy("dashboard.cost_breakdown.calc_prefix");
