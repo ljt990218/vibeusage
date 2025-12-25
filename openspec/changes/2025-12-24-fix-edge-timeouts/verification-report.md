@@ -1,7 +1,7 @@
 # Verification Report
 
 ## Scope
-- Usage endpoints use JWT payload fast path to avoid auth roundtrip.
+- Usage endpoints avoid trusting unverified JWT payloads; expired tokens are rejected before auth.
 
 ## Tests Run
 - `node --test test/edge-functions.test.js`
@@ -10,6 +10,7 @@
 ## Results
 - Passed
 - Ingest probe returned `200` in `1.591s`; response `{ "success": true, "inserted": 1, "skipped": 0 }`.
+- Security fix verified via edge-functions tests after removing trust in unverified JWT payload `sub`.
 
 ## Evidence
 - `test/edge-functions.test.js` all 19 tests passed.
