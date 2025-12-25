@@ -10,17 +10,25 @@ export function UpgradeAlertModal({
   onClose,
 }) {
   const [copied, setCopied] = useState(false);
+  const storageKey = `vibescore_upgrade_dismissed_${requiredVersion}`;
+  const [isVisible, setIsVisible] = useState(() => {
+    // If running on server, default to true (or handle hydration mismatch)
+    if (typeof window === "undefined") return true;
+    return !localStorage.getItem(storageKey);
+  });
 
-  if (!onClose) {
-    // If no onClose handler is provided, we assume it's still blocking or controlled externally,
-    // but for this specific request we are making it dismissible.
-    // Ideally the parent component controls visibility.
-  }
+  if (!isVisible) return null;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(installCommand);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDismiss = () => {
+    localStorage.setItem(storageKey, "true");
+    setIsVisible(false);
+    if (onClose) onClose();
   };
 
   return (
@@ -89,7 +97,7 @@ export function UpgradeAlertModal({
               {/* Footer Actions */}
               <div className="flex justify-center pt-2 border-t border-white/10 mt-4">
                 <button
-                  onClick={onClose}
+                  onClick={handleDismiss}
                   className="text-[10px] font-black uppercase text-[#FFD700]/60 hover:text-[#FFD700] border border-transparent hover:border-[#FFD700]/30 px-8 py-2 transition-all tracking-widest"
                 >
                   [ DISMISS_NOTICE ]
