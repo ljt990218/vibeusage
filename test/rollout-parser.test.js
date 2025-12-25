@@ -4,7 +4,7 @@ const path = require('node:path');
 const fs = require('node:fs/promises');
 const { test } = require('node:test');
 
-const { parseRolloutIncremental } = require('../src/lib/rollout');
+const { parseRolloutIncremental, parseClaudeIncremental } = require('../src/lib/rollout');
 
 test('parseRolloutIncremental skips duplicate token_count records (unchanged total_token_usage)', async () => {
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'vibescore-rollout-'));
@@ -53,6 +53,7 @@ test('parseRolloutIncremental skips duplicate token_count records (unchanged tot
 
     const queued = await readJsonLines(queuePath);
     assert.equal(queued.length, 1);
+    assert.equal(queued[0].model, 'unknown');
     assert.equal(
       queued.reduce((sum, ev) => sum + Number(ev.total_tokens || 0), 0),
       usage1.total_tokens + usage2.total_tokens
@@ -296,6 +297,80 @@ test('parseRolloutIncremental keeps buckets separate per source', async () => {
   }
 });
 
+test('parseClaudeIncremental aggregates usage into half-hour buckets', async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'vibescore-claude-'));
+  try {
+    const claudePath = path.join(tmp, 'agent-claude.jsonl');
+    const queuePath = path.join(tmp, 'queue.jsonl');
+    const cursors = { version: 1, files: {}, updatedAt: null };
+
+    const model = 'moonshotai/Kimi-K2-Thinking';
+    const lines = [
+      buildClaudeUsageLine({ ts: '2025-12-25T01:05:00.000Z', input: 100, output: 50, model }),
+      buildClaudeUsageLine({ ts: '2025-12-25T01:40:00.000Z', input: 200, model }),
+      JSON.stringify({ timestamp: '2025-12-25T01:41:00.000Z', message: { content: [{ type: 'text', text: 'skip' }] } })
+    ];
+
+    await fs.writeFile(claudePath, lines.join('\n') + '\n', 'utf8');
+
+    const res = await parseClaudeIncremental({
+      projectFiles: [{ path: claudePath, source: 'claude' }],
+      cursors,
+      queuePath
+    });
+    assert.equal(res.filesProcessed, 1);
+    assert.equal(res.eventsAggregated, 2);
+    assert.equal(res.bucketsQueued, 2);
+
+    const queued = await readJsonLines(queuePath);
+    assert.equal(queued.length, 2);
+    assert.ok(queued.every((row) => row.source === 'claude'));
+    assert.ok(queued.every((row) => row.model === model));
+    const byBucket = new Map(queued.map((row) => [row.hour_start, row]));
+    assert.equal(byBucket.get('2025-12-25T01:00:00.000Z')?.input_tokens, 100);
+    assert.equal(byBucket.get('2025-12-25T01:00:00.000Z')?.output_tokens, 50);
+    assert.equal(byBucket.get('2025-12-25T01:00:00.000Z')?.total_tokens, 150);
+    assert.equal(byBucket.get('2025-12-25T01:30:00.000Z')?.input_tokens, 200);
+    assert.equal(byBucket.get('2025-12-25T01:30:00.000Z')?.output_tokens, 0);
+    assert.equal(byBucket.get('2025-12-25T01:30:00.000Z')?.total_tokens, 200);
+
+    const resAgain = await parseClaudeIncremental({
+      projectFiles: [{ path: claudePath, source: 'claude' }],
+      cursors,
+      queuePath
+    });
+    assert.equal(resAgain.bucketsQueued, 0);
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('parseClaudeIncremental defaults missing model to unknown', async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'vibescore-claude-'));
+  try {
+    const claudePath = path.join(tmp, 'agent-claude.jsonl');
+    const queuePath = path.join(tmp, 'queue.jsonl');
+    const cursors = { version: 1, files: {}, updatedAt: null };
+
+    const lines = [buildClaudeUsageLine({ ts: '2025-12-25T02:05:00.000Z', input: 10, output: 5 })];
+    await fs.writeFile(claudePath, lines.join('\n') + '\n', 'utf8');
+
+    const res = await parseClaudeIncremental({
+      projectFiles: [{ path: claudePath, source: 'claude' }],
+      cursors,
+      queuePath
+    });
+    assert.equal(res.filesProcessed, 1);
+    assert.equal(res.bucketsQueued, 1);
+
+    const queued = await readJsonLines(queuePath);
+    assert.equal(queued.length, 1);
+    assert.equal(queued[0].model, 'unknown');
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
 function buildTokenCountLine({ ts, last, total }) {
   return JSON.stringify({
     type: 'event_msg',
@@ -323,6 +398,19 @@ function buildEveryCodeTokenCountLine({ ts, last, total }) {
           last_token_usage: last,
           total_token_usage: total
         }
+      }
+    }
+  });
+}
+
+function buildClaudeUsageLine({ ts, input, output, model }) {
+  return JSON.stringify({
+    timestamp: ts,
+    message: {
+      model,
+      usage: {
+        input_tokens: input,
+        output_tokens: output
       }
     }
   });

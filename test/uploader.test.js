@@ -56,6 +56,7 @@ test('drainQueueToCloud defaults missing source to codex', async () => {
     assert.equal(stub.calls.length, 1);
     assert.equal(stub.calls[0].length, 1);
     assert.equal(stub.calls[0][0].source, 'codex');
+    assert.equal(stub.calls[0][0].model, 'unknown');
   } finally {
     stub.restore();
     await fs.rm(tmp, { recursive: true, force: true });

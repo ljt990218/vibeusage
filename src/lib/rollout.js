@@ -6,7 +6,8 @@ const readline = require('node:readline');
 const { ensureDir } = require('./fs');
 
 const DEFAULT_SOURCE = 'codex';
-const SOURCE_SEPARATOR = '|';
+const DEFAULT_MODEL = 'unknown';
+const BUCKET_SEPARATOR = '|';
 
 async function listRolloutFiles(sessionsDir) {
   const out = [];
@@ -32,6 +33,13 @@ async function listRolloutFiles(sessionsDir) {
     }
   }
 
+  out.sort((a, b) => a.localeCompare(b));
+  return out;
+}
+
+async function listClaudeProjectFiles(projectsDir) {
+  const out = [];
+  await walkClaudeProjects(projectsDir, out);
   out.sort((a, b) => a.localeCompare(b));
   return out;
 }
@@ -82,6 +90,72 @@ async function parseRolloutIncremental({ rolloutFiles, cursors, queuePath, onPro
       offset: result.endOffset,
       lastTotal: result.lastTotal,
       lastModel: result.lastModel,
+      updatedAt: new Date().toISOString()
+    };
+
+    filesProcessed += 1;
+    eventsAggregated += result.eventsAggregated;
+
+    if (cb) {
+      cb({
+        index: idx + 1,
+        total: totalFiles,
+        filePath,
+        filesProcessed,
+        eventsAggregated,
+        bucketsQueued: touchedBuckets.size
+      });
+    }
+  }
+
+  const bucketsQueued = await enqueueTouchedBuckets({ queuePath, hourlyState, touchedBuckets });
+  hourlyState.updatedAt = new Date().toISOString();
+  cursors.hourly = hourlyState;
+
+  return { filesProcessed, eventsAggregated, bucketsQueued };
+}
+
+async function parseClaudeIncremental({ projectFiles, cursors, queuePath, onProgress, source }) {
+  await ensureDir(path.dirname(queuePath));
+  let filesProcessed = 0;
+  let eventsAggregated = 0;
+
+  const cb = typeof onProgress === 'function' ? onProgress : null;
+  const files = Array.isArray(projectFiles) ? projectFiles : [];
+  const totalFiles = files.length;
+  const hourlyState = normalizeHourlyState(cursors?.hourly);
+  const touchedBuckets = new Set();
+  const defaultSource = normalizeSourceInput(source) || 'claude';
+
+  if (!cursors.files || typeof cursors.files !== 'object') {
+    cursors.files = {};
+  }
+
+  for (let idx = 0; idx < files.length; idx++) {
+    const entry = files[idx];
+    const filePath = typeof entry === 'string' ? entry : entry?.path;
+    if (!filePath) continue;
+    const fileSource =
+      typeof entry === 'string' ? defaultSource : normalizeSourceInput(entry?.source) || defaultSource;
+    const st = await fs.stat(filePath).catch(() => null);
+    if (!st || !st.isFile()) continue;
+
+    const key = filePath;
+    const prev = cursors.files[key] || null;
+    const inode = st.ino || 0;
+    const startOffset = prev && prev.inode === inode ? prev.offset || 0 : 0;
+
+    const result = await parseClaudeFile({
+      filePath,
+      startOffset,
+      hourlyState,
+      touchedBuckets,
+      source: fileSource
+    });
+
+    cursors.files[key] = {
+      inode,
+      offset: result.endOffset,
       updatedAt: new Date().toISOString()
     };
 
@@ -169,13 +243,57 @@ async function parseRolloutFile({
     const bucketStart = toUtcHalfHourStart(tokenTimestamp);
     if (!bucketStart) continue;
 
-    const bucket = getHourlyBucket(hourlyState, source, bucketStart);
+    const bucket = getHourlyBucket(hourlyState, source, model, bucketStart);
     addTotals(bucket.totals, delta);
-    touchedBuckets.add(bucketKey(source, bucketStart));
+    touchedBuckets.add(bucketKey(source, model, bucketStart));
     eventsAggregated += 1;
   }
 
   return { endOffset, lastTotal: totals, lastModel: model, eventsAggregated };
+}
+
+async function parseClaudeFile({ filePath, startOffset, hourlyState, touchedBuckets, source }) {
+  const st = await fs.stat(filePath).catch(() => null);
+  if (!st || !st.isFile()) return { endOffset: startOffset, eventsAggregated: 0 };
+
+  const endOffset = st.size;
+  if (startOffset >= endOffset) return { endOffset, eventsAggregated: 0 };
+
+  const stream = fssync.createReadStream(filePath, { encoding: 'utf8', start: startOffset });
+  const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+
+  let eventsAggregated = 0;
+  for await (const line of rl) {
+    if (!line || !line.includes('\"usage\"')) continue;
+    let obj;
+    try {
+      obj = JSON.parse(line);
+    } catch (_e) {
+      continue;
+    }
+
+    const usage = obj?.message?.usage || obj?.usage;
+    if (!usage || typeof usage !== 'object') continue;
+
+    const model = normalizeModelInput(obj?.message?.model || obj?.model) || DEFAULT_MODEL;
+    const tokenTimestamp = typeof obj?.timestamp === 'string' ? obj.timestamp : null;
+    if (!tokenTimestamp) continue;
+
+    const delta = normalizeClaudeUsage(usage);
+    if (!delta || isAllZeroUsage(delta)) continue;
+
+    const bucketStart = toUtcHalfHourStart(tokenTimestamp);
+    if (!bucketStart) continue;
+
+    const bucket = getHourlyBucket(hourlyState, source, model, bucketStart);
+    addTotals(bucket.totals, delta);
+    touchedBuckets.add(bucketKey(source, model, bucketStart));
+    eventsAggregated += 1;
+  }
+
+  rl.close();
+  stream.close?.();
+  return { endOffset, eventsAggregated };
 }
 
 async function enqueueTouchedBuckets({ queuePath, hourlyState, touchedBuckets }) {
@@ -185,14 +303,17 @@ async function enqueueTouchedBuckets({ queuePath, hourlyState, touchedBuckets })
   for (const bucketStart of touchedBuckets) {
     const parsedKey = parseBucketKey(bucketStart);
     const source = parsedKey.source || DEFAULT_SOURCE;
+    const model = parsedKey.model || DEFAULT_MODEL;
     const hourStart = parsedKey.hourStart;
-    const bucket = hourlyState.buckets[bucketKey(source, hourStart)] || hourlyState.buckets[bucketStart];
+    const bucket =
+      hourlyState.buckets[bucketKey(source, model, hourStart)] || hourlyState.buckets[bucketStart];
     if (!bucket || !bucket.totals) continue;
     const key = totalsKey(bucket.totals);
     if (bucket.queuedKey === key) continue;
     toAppend.push(
       JSON.stringify({
         source,
+        model,
         hour_start: hourStart,
         input_tokens: bucket.totals.input_tokens,
         cached_input_tokens: bucket.totals.cached_input_tokens,
@@ -213,26 +334,35 @@ async function enqueueTouchedBuckets({ queuePath, hourlyState, touchedBuckets })
 
 function normalizeHourlyState(raw) {
   const state = raw && typeof raw === 'object' ? raw : {};
+  const version = Number(state.version || 1);
+  if (!Number.isFinite(version) || version < 2) {
+    return {
+      version: 2,
+      buckets: {},
+      updatedAt: null
+    };
+  }
   const rawBuckets = state.buckets && typeof state.buckets === 'object' ? state.buckets : {};
   const buckets = {};
   for (const [key, value] of Object.entries(rawBuckets)) {
-    if (key.includes(SOURCE_SEPARATOR)) {
-      buckets[key] = value;
-      continue;
-    }
-    buckets[bucketKey(DEFAULT_SOURCE, key)] = value;
+    const parsed = parseBucketKey(key);
+    const hourStart = parsed.hourStart;
+    if (!hourStart) continue;
+    const normalizedKey = bucketKey(parsed.source, parsed.model, hourStart);
+    buckets[normalizedKey] = value;
   }
   return {
-    version: 1,
+    version: 2,
     buckets,
     updatedAt: typeof state.updatedAt === 'string' ? state.updatedAt : null
   };
 }
 
-function getHourlyBucket(state, source, hourStart) {
+function getHourlyBucket(state, source, model, hourStart) {
   const buckets = state.buckets;
   const normalizedSource = normalizeSourceInput(source) || DEFAULT_SOURCE;
-  const key = bucketKey(normalizedSource, hourStart);
+  const normalizedModel = normalizeModelInput(model) || DEFAULT_MODEL;
+  const key = bucketKey(normalizedSource, normalizedModel, hourStart);
   let bucket = buckets[key];
   if (!bucket || typeof bucket !== 'object') {
     bucket = { totals: initTotals(), queuedKey: null };
@@ -298,21 +428,36 @@ function toUtcHalfHourStart(ts) {
   return bucketStart.toISOString();
 }
 
-function bucketKey(source, hourStart) {
+function bucketKey(source, model, hourStart) {
   const safeSource = normalizeSourceInput(source) || DEFAULT_SOURCE;
-  return `${safeSource}${SOURCE_SEPARATOR}${hourStart}`;
+  const safeModel = normalizeModelInput(model) || DEFAULT_MODEL;
+  return `${safeSource}${BUCKET_SEPARATOR}${safeModel}${BUCKET_SEPARATOR}${hourStart}`;
 }
 
 function parseBucketKey(key) {
-  if (typeof key !== 'string') return { source: DEFAULT_SOURCE, hourStart: '' };
-  const idx = key.indexOf(SOURCE_SEPARATOR);
-  if (idx <= 0) return { source: DEFAULT_SOURCE, hourStart: key };
-  return { source: key.slice(0, idx), hourStart: key.slice(idx + 1) };
+  if (typeof key !== 'string') return { source: DEFAULT_SOURCE, model: DEFAULT_MODEL, hourStart: '' };
+  const first = key.indexOf(BUCKET_SEPARATOR);
+  if (first <= 0) return { source: DEFAULT_SOURCE, model: DEFAULT_MODEL, hourStart: key };
+  const second = key.indexOf(BUCKET_SEPARATOR, first + 1);
+  if (second <= 0) {
+    return { source: key.slice(0, first), model: DEFAULT_MODEL, hourStart: key.slice(first + 1) };
+  }
+  return {
+    source: key.slice(0, first),
+    model: key.slice(first + 1, second),
+    hourStart: key.slice(second + 1)
+  };
 }
 
 function normalizeSourceInput(value) {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim().toLowerCase();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeModelInput(value) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
 }
 
@@ -377,6 +522,16 @@ function normalizeUsage(u) {
   return out;
 }
 
+function normalizeClaudeUsage(u) {
+  return {
+    input_tokens: toNonNegativeInt(u?.input_tokens),
+    cached_input_tokens: toNonNegativeInt(u?.cache_read_input_tokens),
+    output_tokens: toNonNegativeInt(u?.output_tokens),
+    reasoning_output_tokens: 0,
+    total_tokens: toNonNegativeInt(u?.input_tokens) + toNonNegativeInt(u?.output_tokens)
+  };
+}
+
 function isNonEmptyObject(v) {
   return Boolean(v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length > 0);
 }
@@ -421,7 +576,21 @@ async function safeReadDir(dir) {
   }
 }
 
+async function walkClaudeProjects(dir, out) {
+  const entries = await safeReadDir(dir);
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      await walkClaudeProjects(fullPath, out);
+      continue;
+    }
+    if (entry.isFile() && entry.name.endsWith('.jsonl')) out.push(fullPath);
+  }
+}
+
 module.exports = {
   listRolloutFiles,
-  parseRolloutIncremental
+  listClaudeProjectFiles,
+  parseRolloutIncremental,
+  parseClaudeIncremental
 };
