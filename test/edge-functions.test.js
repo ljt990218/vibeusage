@@ -404,11 +404,21 @@ test('vibescore-ingest works without serviceRoleKey via anonKey records API', as
   const data = await res.json();
   assert.deepEqual(data, { success: true, inserted: 1, skipped: 0 });
 
-  assert.equal(fetchCalls.length, 3);
-  const getCall = fetchCalls[0];
-  const postCall = fetchCalls[1];
-  const touchCall = fetchCalls[2];
+  assert.equal(fetchCalls.length, 4);
+  const getCall = fetchCalls.find((call) =>
+    String(call.url).includes('/api/database/records/vibescore_tracker_device_tokens')
+  );
+  const postCall = fetchCalls.find((call) =>
+    String(call.url).includes('/api/database/records/vibescore_tracker_hourly')
+  );
+  const touchCall = fetchCalls.find((call) =>
+    String(call.url).includes('/api/database/rpc/vibescore_touch_device_token_sync')
+  );
+  const metricsCall = fetchCalls.find((call) =>
+    String(call.url).includes('/api/database/records/vibescore_tracker_ingest_batches')
+  );
 
+  assert.ok(getCall, 'device token fetch not found');
   assert.ok(String(getCall.url).includes('/api/database/records/vibescore_tracker_device_tokens'));
   assert.equal(getCall.init?.method, 'GET');
   assert.equal(getCall.init?.headers?.apikey, ANON_KEY);
@@ -416,6 +426,7 @@ test('vibescore-ingest works without serviceRoleKey via anonKey records API', as
   assert.equal(typeof getCall.init?.headers?.['x-vibescore-device-token-hash'], 'string');
   assert.equal(getCall.init?.headers?.['x-vibescore-device-token-hash'].length, 64);
 
+  assert.ok(postCall, 'hourly upsert call not found');
   assert.ok(String(postCall.url).includes('/api/database/records/vibescore_tracker_hourly'));
   assert.equal(postCall.init?.method, 'POST');
   assert.equal(postCall.init?.headers?.Prefer, 'return=representation,resolution=merge-duplicates');
@@ -423,11 +434,18 @@ test('vibescore-ingest works without serviceRoleKey via anonKey records API', as
   assert.equal(postUrl.searchParams.get('on_conflict'), 'user_id,device_id,source,hour_start');
   assert.equal(postUrl.searchParams.get('select'), 'hour_start');
 
+  assert.ok(touchCall, 'touch RPC call not found');
   assert.ok(String(touchCall.url).includes('/api/database/rpc/vibescore_touch_device_token_sync'));
   assert.equal(touchCall.init?.method, 'POST');
   assert.equal(touchCall.init?.headers?.apikey, ANON_KEY);
   assert.equal(touchCall.init?.headers?.Authorization, `Bearer ${ANON_KEY}`);
   assert.equal(typeof touchCall.init?.headers?.['x-vibescore-device-token-hash'], 'string');
+
+  assert.ok(metricsCall, 'ingest batch metrics call not found');
+  assert.ok(String(metricsCall.url).includes('/api/database/records/vibescore_tracker_ingest_batches'));
+  assert.equal(metricsCall.init?.method, 'POST');
+  assert.equal(metricsCall.init?.headers?.apikey, ANON_KEY);
+  assert.equal(metricsCall.init?.headers?.Authorization, `Bearer ${ANON_KEY}`);
 });
 
 test('vibescore-ingest anonKey path errors when hourly upsert unsupported', async () => {
