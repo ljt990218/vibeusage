@@ -1008,6 +1008,75 @@ test('vibescore-usage-summary returns total_cost_usd and pricing metadata', asyn
   assert.equal(body.pricing.rates_per_million_usd.cached_input, '0.175000');
 });
 
+test('vibescore-usage-summary prefers jwt payload to avoid auth roundtrip', async () => {
+  const fn = require('../insforge-functions/vibescore-usage-summary');
+
+  const userId = '77777777-7777-7777-7777-777777777777';
+  const payload = Buffer.from(JSON.stringify({ sub: userId, exp: 1893456000 })).toString('base64url');
+  const userJwt = `header.${payload}.sig`;
+
+  const rows = [
+    {
+      hour_start: '2025-12-21T01:00:00.000Z',
+      total_tokens: '10',
+      input_tokens: '6',
+      cached_input_tokens: '2',
+      output_tokens: '4',
+      reasoning_output_tokens: '1'
+    }
+  ];
+
+  let authCalls = 0;
+
+  globalThis.createClient = (args) => {
+    if (args && args.edgeFunctionToken === userJwt) {
+      assert.equal(args.anonKey, ANON_KEY);
+      return {
+        auth: {
+          getCurrentUser: async () => {
+            authCalls += 1;
+            return { data: { user: { id: 'should-not-be-used' } }, error: null };
+          }
+        },
+        database: {
+          from: (table) => {
+            assert.equal(table, 'vibescore_tracker_hourly');
+            return {
+              select: () => ({
+                eq: (col, value) => {
+                  assert.equal(col, 'user_id');
+                  assert.equal(value, userId);
+                  return {
+                    gte: () => ({
+                      lt: () => ({
+                        order: async () => ({ data: rows, error: null })
+                      })
+                    })
+                  };
+                }
+              })
+            };
+          }
+        }
+      };
+    }
+    throw new Error(`Unexpected createClient args: ${JSON.stringify(args)}`);
+  };
+
+  const req = new Request(
+    'http://localhost/functions/vibescore-usage-summary?from=2025-12-21&to=2025-12-21',
+    {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${userJwt}` }
+    }
+  );
+
+  const res = await fn(req);
+  assert.equal(res.status, 200);
+
+  assert.equal(authCalls, 0, 'expected jwt payload to skip auth.getCurrentUser');
+});
+
 test('vibescore-leaderboard returns a week window and slices entries to limit', async () => {
   setDenoEnv({
     INSFORGE_INTERNAL_URL: BASE_URL,
