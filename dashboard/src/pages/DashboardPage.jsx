@@ -696,6 +696,11 @@ export function DashboardPage({ baseUrl, auth, signedIn, signOut }) {
               statusLabel={usageSourceLabel}
             />
 
+            <NeuralDivergenceMap
+              fleetData={fleetData}
+              className="min-w-0"
+            />
+
             <TrendMonitor
               rows={trendRowsForDisplay}
               from={trendFromForDisplay}
@@ -703,11 +708,6 @@ export function DashboardPage({ baseUrl, auth, signedIn, signOut }) {
               period={period}
               timeZoneLabel={trendTimeZoneLabel}
               showTimeZoneLabel={false}
-            />
-
-            <NeuralDivergenceMap
-              fleetData={fleetData}
-              className="min-w-0"
             />
 
             <AsciiBox
