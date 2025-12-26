@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 ### Documentation
 - Document Gemini CLI log location and `GEMINI_HOME`.
 
+### Release
+- Published to npm as `@vibescore/tracker@0.1.0`.
+
 ## [0.0.7] - 2025-12-24
 ### Added
 - Auto-configure Every Code notify when `~/.code/config.toml` (or `CODE_HOME`) exists; skip if missing.
