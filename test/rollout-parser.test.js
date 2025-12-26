@@ -582,6 +582,70 @@ test('parseGeminiIncremental is idempotent with cursor', async () => {
   }
 });
 
+test('parseGeminiIncremental resets cursor when inode changes', async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'vibescore-gemini-'));
+  try {
+    const sessionPath = path.join(tmp, 'session.json');
+    const replacementPath = path.join(tmp, 'session-new.json');
+    const queuePath = path.join(tmp, 'queue.jsonl');
+    const cursors = { version: 1, files: {}, updatedAt: null };
+
+    await fs.writeFile(
+      sessionPath,
+      buildGeminiSession({
+        messages: [
+          buildGeminiMessage({
+            id: 'm1',
+            ts: '2025-12-24T18:07:10.826Z',
+            model: 'gemini-3-pro-preview',
+            tokens: { input: 1, output: 1, cached: 0, thoughts: 0, tool: 0, total: 2 }
+          })
+        ]
+      }),
+      'utf8'
+    );
+
+    const first = await parseGeminiIncremental({
+      sessionFiles: [sessionPath],
+      cursors,
+      queuePath,
+      source: 'gemini'
+    });
+    assert.equal(first.eventsAggregated, 1);
+
+    const inodeBefore = (await fs.stat(sessionPath)).ino;
+
+    await fs.writeFile(
+      replacementPath,
+      buildGeminiSession({
+        messages: [
+          buildGeminiMessage({
+            id: 'm2',
+            ts: '2025-12-24T18:08:10.826Z',
+            model: 'gemini-3-pro-preview',
+            tokens: { input: 2, output: 1, cached: 0, thoughts: 0, tool: 0, total: 3 }
+          })
+        ]
+      }),
+      'utf8'
+    );
+    await fs.rename(replacementPath, sessionPath);
+
+    const inodeAfter = (await fs.stat(sessionPath)).ino;
+    assert.notEqual(inodeBefore, inodeAfter);
+
+    const second = await parseGeminiIncremental({
+      sessionFiles: [sessionPath],
+      cursors,
+      queuePath,
+      source: 'gemini'
+    });
+    assert.equal(second.eventsAggregated, 1);
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
 function buildTurnContextLine({ model }) {
   return JSON.stringify({
     type: 'turn_context',
