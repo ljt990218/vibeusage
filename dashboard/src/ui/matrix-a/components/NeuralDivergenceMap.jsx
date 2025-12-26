@@ -10,9 +10,14 @@ export const NeuralDivergenceMap = React.memo(function NeuralDivergenceMap({
   title = copy("dashboard.model_breakdown.title"),
   footer = copy("dashboard.model_breakdown.footer"),
 }) {
+  const isSingle = fleetData.length === 1;
+  const gridClass = isSingle
+    ? "grid grid-cols-1"
+    : "grid grid-cols-1 md:grid-cols-2";
+
   return (
     <AsciiBox title={title} className={className}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-1 overflow-y-auto no-scrollbar">
+      <div className={`${gridClass} gap-6 py-1 overflow-y-auto no-scrollbar`}>
         {fleetData.map((fleet, index) => (
           <NeuralAdaptiveFleet
             key={`${fleet.label}-${index}`}
