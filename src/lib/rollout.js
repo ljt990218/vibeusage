@@ -44,6 +44,13 @@ async function listClaudeProjectFiles(projectsDir) {
   return out;
 }
 
+async function listGeminiSessionFiles(tmpDir) {
+  const out = [];
+  await walkGeminiSessions(tmpDir, out);
+  out.sort((a, b) => a.localeCompare(b));
+  return out;
+}
+
 async function parseRolloutIncremental({ rolloutFiles, cursors, queuePath, onProgress, source }) {
   await ensureDir(path.dirname(queuePath));
   let filesProcessed = 0;
@@ -156,6 +163,75 @@ async function parseClaudeIncremental({ projectFiles, cursors, queuePath, onProg
     cursors.files[key] = {
       inode,
       offset: result.endOffset,
+      updatedAt: new Date().toISOString()
+    };
+
+    filesProcessed += 1;
+    eventsAggregated += result.eventsAggregated;
+
+    if (cb) {
+      cb({
+        index: idx + 1,
+        total: totalFiles,
+        filePath,
+        filesProcessed,
+        eventsAggregated,
+        bucketsQueued: touchedBuckets.size
+      });
+    }
+  }
+
+  const bucketsQueued = await enqueueTouchedBuckets({ queuePath, hourlyState, touchedBuckets });
+  hourlyState.updatedAt = new Date().toISOString();
+  cursors.hourly = hourlyState;
+
+  return { filesProcessed, eventsAggregated, bucketsQueued };
+}
+
+async function parseGeminiIncremental({ sessionFiles, cursors, queuePath, onProgress, source }) {
+  await ensureDir(path.dirname(queuePath));
+  let filesProcessed = 0;
+  let eventsAggregated = 0;
+
+  const cb = typeof onProgress === 'function' ? onProgress : null;
+  const files = Array.isArray(sessionFiles) ? sessionFiles : [];
+  const totalFiles = files.length;
+  const hourlyState = normalizeHourlyState(cursors?.hourly);
+  const touchedBuckets = new Set();
+  const defaultSource = normalizeSourceInput(source) || 'gemini';
+
+  if (!cursors.files || typeof cursors.files !== 'object') {
+    cursors.files = {};
+  }
+
+  for (let idx = 0; idx < files.length; idx++) {
+    const entry = files[idx];
+    const filePath = typeof entry === 'string' ? entry : entry?.path;
+    if (!filePath) continue;
+    const fileSource =
+      typeof entry === 'string' ? defaultSource : normalizeSourceInput(entry?.source) || defaultSource;
+    const st = await fs.stat(filePath).catch(() => null);
+    if (!st || !st.isFile()) continue;
+
+    const key = filePath;
+    const prev = cursors.files[key] || null;
+    const inode = st.ino || 0;
+
+    const result = await parseGeminiFile({
+      filePath,
+      lastIndex: typeof prev?.lastIndex === 'number' ? prev.lastIndex : null,
+      lastMessageId: typeof prev?.lastMessageId === 'string' ? prev.lastMessageId : null,
+      lastTimestamp: typeof prev?.lastTimestamp === 'string' ? prev.lastTimestamp : null,
+      hourlyState,
+      touchedBuckets,
+      source: fileSource
+    });
+
+    cursors.files[key] = {
+      inode,
+      lastIndex: result.lastIndex,
+      lastMessageId: result.lastMessageId,
+      lastTimestamp: result.lastTimestamp,
       updatedAt: new Date().toISOString()
     };
 
@@ -294,6 +370,71 @@ async function parseClaudeFile({ filePath, startOffset, hourlyState, touchedBuck
   rl.close();
   stream.close?.();
   return { endOffset, eventsAggregated };
+}
+
+async function parseGeminiFile({
+  filePath,
+  lastIndex,
+  lastMessageId,
+  lastTimestamp,
+  hourlyState,
+  touchedBuckets,
+  source
+}) {
+  const text = await fs.readFile(filePath, 'utf8').catch(() => null);
+  if (!text) {
+    return { lastIndex: lastIndex ?? null, lastMessageId, lastTimestamp, eventsAggregated: 0 };
+  }
+
+  let obj;
+  try {
+    obj = JSON.parse(text);
+  } catch (_e) {
+    return { lastIndex: lastIndex ?? null, lastMessageId, lastTimestamp, eventsAggregated: 0 };
+  }
+
+  const messages = Array.isArray(obj?.messages) ? obj.messages : [];
+  const startIndex = findGeminiStartIndex(messages, lastIndex, lastMessageId, lastTimestamp);
+
+  let eventsAggregated = 0;
+  let lastSeenIndex = typeof lastIndex === 'number' ? lastIndex : -1;
+  let lastSeenMessageId = typeof lastMessageId === 'string' ? lastMessageId : null;
+  let lastSeenTimestamp = typeof lastTimestamp === 'string' ? lastTimestamp : null;
+
+  for (let i = startIndex; i < messages.length; i++) {
+    const msg = messages[i];
+    if (!msg || typeof msg !== 'object') continue;
+
+    const ts = typeof msg.timestamp === 'string' ? msg.timestamp : null;
+    const msgId = typeof msg.id === 'string' ? msg.id : null;
+    const tokens = msg.tokens;
+    const model = normalizeModelInput(msg.model) || DEFAULT_MODEL;
+
+    lastSeenIndex = i;
+    if (msgId) lastSeenMessageId = msgId;
+    if (ts) lastSeenTimestamp = ts;
+
+    if (!tokens || typeof tokens !== 'object') continue;
+    if (!ts) continue;
+
+    const delta = normalizeGeminiUsage(tokens);
+    if (!delta || isAllZeroUsage(delta)) continue;
+
+    const bucketStart = toUtcHalfHourStart(ts);
+    if (!bucketStart) continue;
+
+    const bucket = getHourlyBucket(hourlyState, source, model, bucketStart);
+    addTotals(bucket.totals, delta);
+    touchedBuckets.add(bucketKey(source, model, bucketStart));
+    eventsAggregated += 1;
+  }
+
+  return {
+    lastIndex: lastSeenIndex >= 0 ? lastSeenIndex : null,
+    lastMessageId: lastSeenMessageId,
+    lastTimestamp: lastSeenTimestamp,
+    eventsAggregated
+  };
 }
 
 async function enqueueTouchedBuckets({ queuePath, hourlyState, touchedBuckets }) {
@@ -591,6 +732,25 @@ function normalizeClaudeUsage(u) {
   };
 }
 
+function normalizeGeminiUsage(u) {
+  const inputTokens = toNonNegativeInt(u?.input);
+  const outputTokens = toNonNegativeInt(u?.output);
+  const toolTokens = toNonNegativeInt(u?.tool);
+  const cachedTokens = toNonNegativeInt(u?.cached);
+  const reasoningTokens = toNonNegativeInt(u?.thoughts);
+  const hasTotal = u && Object.prototype.hasOwnProperty.call(u, 'total');
+  const totalTokens = hasTotal
+    ? toNonNegativeInt(u?.total)
+    : inputTokens + outputTokens + toolTokens + cachedTokens + reasoningTokens;
+  return {
+    input_tokens: inputTokens,
+    cached_input_tokens: cachedTokens,
+    output_tokens: outputTokens + toolTokens,
+    reasoning_output_tokens: reasoningTokens,
+    total_tokens: totalTokens
+  };
+}
+
 function isNonEmptyObject(v) {
   return Boolean(v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length > 0);
 }
@@ -647,9 +807,54 @@ async function walkClaudeProjects(dir, out) {
   }
 }
 
+async function walkGeminiSessions(dir, out) {
+  const entries = await safeReadDir(dir);
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      await walkGeminiSessions(fullPath, out);
+      continue;
+    }
+    if (!entry.isFile()) continue;
+    if (!entry.name.startsWith('session-') || !entry.name.endsWith('.json')) continue;
+    if (path.basename(path.dirname(fullPath)) !== 'chats') continue;
+    out.push(fullPath);
+  }
+}
+
+function findGeminiStartIndex(messages, lastIndex, lastMessageId, lastTimestamp) {
+  const safeLastIndex = typeof lastIndex === 'number' ? lastIndex : null;
+  if (typeof lastMessageId === 'string' && lastMessageId.length > 0) {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      if (msg && typeof msg === 'object' && msg.id === lastMessageId) {
+        return i + 1;
+      }
+    }
+  }
+  if (safeLastIndex != null) {
+    return Math.min(safeLastIndex + 1, messages.length);
+  }
+  if (typeof lastTimestamp === 'string') {
+    const lastMs = new Date(lastTimestamp).getTime();
+    if (Number.isFinite(lastMs)) {
+      for (let i = 0; i < messages.length; i++) {
+        const msgTs = typeof messages[i]?.timestamp === 'string' ? messages[i].timestamp : null;
+        if (!msgTs) continue;
+        const msgMs = new Date(msgTs).getTime();
+        if (Number.isFinite(msgMs) && msgMs > lastMs) return i;
+      }
+      return messages.length;
+    }
+  }
+  return 0;
+}
+
 module.exports = {
   listRolloutFiles,
   listClaudeProjectFiles,
+  listGeminiSessionFiles,
   parseRolloutIncremental,
-  parseClaudeIncremental
+  parseClaudeIncremental,
+  parseGeminiIncremental
 };
