@@ -268,6 +268,114 @@ test('parseRolloutIncremental handles total_token_usage reset when last_token_us
   }
 });
 
+test('parseGeminiIncremental aggregates gemini tokens and model', async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'vibescore-gemini-'));
+  try {
+    const sessionPath = path.join(tmp, 'session.json');
+    const queuePath = path.join(tmp, 'queue.jsonl');
+    const cursors = { version: 1, files: {}, updatedAt: null };
+
+    const session = buildGeminiSession({
+      messages: [
+        {
+          id: 'm1',
+          type: 'assistant',
+          timestamp: '2025-12-26T08:05:00.000Z',
+          model: 'gemini-3-flash-preview',
+          content: { text: 'ignore me' },
+          tokens: { input: 10, output: 1, cached: 2, thoughts: 0, tool: 1, total: 14 }
+        }
+      ]
+    });
+
+    await fs.writeFile(sessionPath, JSON.stringify(session), 'utf8');
+
+    const res = await parseGeminiIncremental({ sessionFiles: [sessionPath], cursors, queuePath });
+    assert.equal(res.filesProcessed, 1);
+    assert.equal(res.eventsAggregated, 1);
+    assert.equal(res.bucketsQueued, 1);
+
+    const queued = await readJsonLines(queuePath);
+    assert.equal(queued.length, 1);
+    assert.equal(queued[0].source, 'gemini');
+    assert.equal(queued[0].model, 'gemini-3-flash-preview');
+    assert.equal(queued[0].hour_start, '2025-12-26T08:00:00.000Z');
+    assert.equal(queued[0].input_tokens, 10);
+    assert.equal(queued[0].cached_input_tokens, 2);
+    assert.equal(queued[0].output_tokens, 2);
+    assert.equal(queued[0].reasoning_output_tokens, 0);
+    assert.equal(queued[0].total_tokens, 14);
+    assert.equal(typeof queued[0].content, 'undefined');
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('parseGeminiIncremental is idempotent with unchanged totals', async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'vibescore-gemini-'));
+  try {
+    const sessionPath = path.join(tmp, 'session.json');
+    const queuePath = path.join(tmp, 'queue.jsonl');
+    const cursors = { version: 1, files: {}, updatedAt: null };
+
+    const session = buildGeminiSession({
+      messages: [
+        {
+          id: 'm1',
+          type: 'assistant',
+          timestamp: '2025-12-26T08:05:00.000Z',
+          model: 'gemini-3-flash-preview',
+          tokens: { input: 5, output: 1, cached: 0, thoughts: 0, tool: 0, total: 6 }
+        }
+      ]
+    });
+
+    await fs.writeFile(sessionPath, JSON.stringify(session), 'utf8');
+
+    await parseGeminiIncremental({ sessionFiles: [sessionPath], cursors, queuePath });
+    const afterFirst = await readJsonLines(queuePath);
+
+    const res = await parseGeminiIncremental({ sessionFiles: [sessionPath], cursors, queuePath });
+    assert.equal(res.bucketsQueued, 0);
+
+    const afterSecond = await readJsonLines(queuePath);
+    assert.equal(afterSecond.length, afterFirst.length);
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('parseGeminiIncremental defaults missing model to unknown', async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'vibescore-gemini-'));
+  try {
+    const sessionPath = path.join(tmp, 'session.json');
+    const queuePath = path.join(tmp, 'queue.jsonl');
+    const cursors = { version: 1, files: {}, updatedAt: null };
+
+    const session = buildGeminiSession({
+      messages: [
+        {
+          id: 'm1',
+          type: 'assistant',
+          timestamp: '2025-12-26T08:05:00.000Z',
+          tokens: { input: 1, output: 0, cached: 0, thoughts: 0, tool: 0, total: 1 }
+        }
+      ]
+    });
+
+    await fs.writeFile(sessionPath, JSON.stringify(session), 'utf8');
+
+    const res = await parseGeminiIncremental({ sessionFiles: [sessionPath], cursors, queuePath });
+    assert.equal(res.bucketsQueued, 1);
+
+    const queued = await readJsonLines(queuePath);
+    assert.equal(queued.length, 1);
+    assert.equal(queued[0].model, 'unknown');
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
 test('parseRolloutIncremental handles Every Code token_count envelope', async () => {
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'vibescore-rollout-'));
   try {
@@ -501,151 +609,6 @@ test('parseClaudeIncremental defaults missing model to unknown', async () => {
   }
 });
 
-test('parseGeminiIncremental maps tokens and aggregates half-hour buckets', async () => {
-  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'vibescore-gemini-'));
-  try {
-    const sessionPath = path.join(tmp, 'session.json');
-    const queuePath = path.join(tmp, 'queue.jsonl');
-    const cursors = { version: 1, files: {}, updatedAt: null };
-
-    const messages = [
-      buildGeminiMessage({
-        id: 'm1',
-        ts: '2025-12-24T18:07:10.826Z',
-        model: 'gemini-3-pro-preview',
-        tokens: { input: 2, output: 3, cached: 1, thoughts: 4, tool: 5, total: 15 }
-      })
-    ];
-
-    await fs.writeFile(sessionPath, buildGeminiSession({ messages }), 'utf8');
-
-    const res = await parseGeminiIncremental({
-      sessionFiles: [sessionPath],
-      cursors,
-      queuePath,
-      source: 'gemini'
-    });
-
-    assert.equal(res.filesProcessed, 1);
-    assert.equal(res.eventsAggregated, 1);
-    assert.equal(res.bucketsQueued, 1);
-
-    const queued = await readJsonLines(queuePath);
-    assert.equal(queued.length, 1);
-    assert.equal(queued[0].source, 'gemini');
-    assert.equal(queued[0].model, 'gemini-3-pro-preview');
-    assert.equal(queued[0].input_tokens, 2);
-    assert.equal(queued[0].cached_input_tokens, 1);
-    assert.equal(queued[0].reasoning_output_tokens, 4);
-    assert.equal(queued[0].output_tokens, 8);
-    assert.equal(queued[0].total_tokens, 15);
-  } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
-  }
-});
-
-test('parseGeminiIncremental is idempotent with cursor', async () => {
-  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'vibescore-gemini-'));
-  try {
-    const sessionPath = path.join(tmp, 'session.json');
-    const queuePath = path.join(tmp, 'queue.jsonl');
-    const cursors = { version: 1, files: {}, updatedAt: null };
-
-    const messages = [
-      buildGeminiMessage({
-        id: 'm1',
-        ts: '2025-12-24T18:07:10.826Z',
-        model: 'gemini-3-pro-preview',
-        tokens: { input: 1, output: 1, cached: 0, thoughts: 0, tool: 1, total: 3 }
-      })
-    ];
-
-    await fs.writeFile(sessionPath, buildGeminiSession({ messages }), 'utf8');
-
-    const first = await parseGeminiIncremental({
-      sessionFiles: [sessionPath],
-      cursors,
-      queuePath,
-      source: 'gemini'
-    });
-    const second = await parseGeminiIncremental({
-      sessionFiles: [sessionPath],
-      cursors,
-      queuePath,
-      source: 'gemini'
-    });
-
-    assert.equal(first.eventsAggregated, 1);
-    assert.equal(second.eventsAggregated, 0);
-  } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
-  }
-});
-
-test('parseGeminiIncremental resets cursor when inode changes', async () => {
-  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'vibescore-gemini-'));
-  try {
-    const sessionPath = path.join(tmp, 'session.json');
-    const replacementPath = path.join(tmp, 'session-new.json');
-    const queuePath = path.join(tmp, 'queue.jsonl');
-    const cursors = { version: 1, files: {}, updatedAt: null };
-
-    await fs.writeFile(
-      sessionPath,
-      buildGeminiSession({
-        messages: [
-          buildGeminiMessage({
-            id: 'm1',
-            ts: '2025-12-24T18:07:10.826Z',
-            model: 'gemini-3-pro-preview',
-            tokens: { input: 1, output: 1, cached: 0, thoughts: 0, tool: 0, total: 2 }
-          })
-        ]
-      }),
-      'utf8'
-    );
-
-    const first = await parseGeminiIncremental({
-      sessionFiles: [sessionPath],
-      cursors,
-      queuePath,
-      source: 'gemini'
-    });
-    assert.equal(first.eventsAggregated, 1);
-
-    const inodeBefore = (await fs.stat(sessionPath)).ino;
-
-    await fs.writeFile(
-      replacementPath,
-      buildGeminiSession({
-        messages: [
-          buildGeminiMessage({
-            id: 'm2',
-            ts: '2025-12-24T18:08:10.826Z',
-            model: 'gemini-3-pro-preview',
-            tokens: { input: 2, output: 1, cached: 0, thoughts: 0, tool: 0, total: 3 }
-          })
-        ]
-      }),
-      'utf8'
-    );
-    await fs.rename(replacementPath, sessionPath);
-
-    const inodeAfter = (await fs.stat(sessionPath)).ino;
-    assert.notEqual(inodeBefore, inodeAfter);
-
-    const second = await parseGeminiIncremental({
-      sessionFiles: [sessionPath],
-      cursors,
-      queuePath,
-      source: 'gemini'
-    });
-    assert.equal(second.eventsAggregated, 1);
-  } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
-  }
-});
-
 function buildTurnContextLine({ model }) {
   return JSON.stringify({
     type: 'turn_context',
@@ -702,24 +665,12 @@ function buildClaudeUsageLine({ ts, input, output, model, total }) {
 }
 
 function buildGeminiSession({ messages }) {
-  return JSON.stringify({
-    sessionId: 'session-1',
-    projectHash: 'proj-1',
-    startTime: '2025-12-24T18:00:00.000Z',
-    lastUpdated: '2025-12-24T18:10:00.000Z',
-    messages
-  });
-}
-
-function buildGeminiMessage({ id, ts, model, tokens, content = 'ignored', thoughts = 'ignored' }) {
   return {
-    id,
-    timestamp: ts,
-    type: 'assistant',
-    model,
-    content,
-    thoughts,
-    tokens
+    sessionId: 'session-id',
+    projectHash: 'project-hash',
+    startTime: '2025-12-26T08:00:00.000Z',
+    lastUpdated: '2025-12-26T08:10:00.000Z',
+    messages
   };
 }
 

@@ -261,8 +261,8 @@ async function cmdSync(argv) {
     });
 
     if (!opts.auto) {
-      const totalParsed = parseResult.filesProcessed + claudeResult.filesProcessed;
-      const totalBuckets = parseResult.bucketsQueued + claudeResult.bucketsQueued;
+      const totalParsed = parseResult.filesProcessed + claudeResult.filesProcessed + geminiResult.filesProcessed;
+      const totalBuckets = parseResult.bucketsQueued + claudeResult.bucketsQueued + geminiResult.bucketsQueued;
       process.stdout.write(
         [
           'Sync finished:',

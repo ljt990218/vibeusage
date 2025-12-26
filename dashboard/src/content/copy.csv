@@ -18,21 +18,21 @@ landing.handle.default,landing,LandingPage,LandingPage,handle_default,"VIBE_USER
 landing.handle.special,landing,LandingPage,LandingPage,handle_special,"VOLT",,active
 landing.hero.title_primary,landing,LandingPage,LandingPage,hero_title_primary,"MORE_TOKENS.",,active
 landing.hero.title_secondary,landing,LandingPage,LandingPage,hero_title_secondary,"MORE_VIBE.",,active
-landing.hero.tagline,landing,LandingPage,LandingPage,hero_tagline,"CODEX TOKEN USAGE TRACKER",,active
-landing.hero.subtagline,landing,LandingPage,LandingPage,hero_subtagline,"Track Codex token usage from the CLI in real time.",,active
-landing.meta.title,landing,LandingPage,Meta,title,"VibeScore | Codex Token Usage Tracker",,active
-landing.meta.description,landing,LandingPage,Meta,description,"VibeScore is a Codex token usage tracker for Codex CLI. Auto-track token usage, visualize in a Matrix-style UI, and compare on the leaderboard.",,active
+landing.hero.tagline,landing,LandingPage,LandingPage,hero_tagline,"CODEX / CLAUDE CODE / GEMINI CLI TRACKER",,active
+landing.hero.subtagline,landing,LandingPage,LandingPage,hero_subtagline,"Track Codex, Claude Code & Gemini CLI usage in real time.",,active
+landing.meta.title,landing,LandingPage,Meta,title,"VibeScore | Codex, Claude Code & Gemini CLI Token Tracker",,active
+landing.meta.description,landing,LandingPage,Meta,description,"VibeScore is a token tracker for Codex, Claude Code & Gemini CLI. Auto-track usage, visualize in a Matrix-style UI, and compare rankings.",,active
 landing.meta.og_site_name,landing,LandingPage,Meta,og_site_name,"VibeScore",,active
 landing.meta.og_type,landing,LandingPage,Meta,og_type,"website",,active
 landing.meta.og_url,landing,LandingPage,Meta,og_url,"https://www.vibescore.space",,active
 landing.meta.og_image,landing,LandingPage,Meta,og_image,"https://www.vibescore.space/og-image.png",,active
 landing.meta.twitter_card,landing,LandingPage,Meta,twitter_card,"summary_large_image",,active
-landing.seo.title,landing,LandingPage,LandingPage,seo_title,"Codex Token Usage, Quantified",,active
-landing.seo.summary,landing,LandingPage,LandingPage,seo_summary,"VibeScore is a token usage tracker built for Codex CLI users who want a fast, reliable view of Codex token spend.",,active
-landing.seo.point1,landing,LandingPage,LandingPage,seo_point_1,"Auto-track Codex CLI token usage with zero manual steps.",,active
+landing.seo.title,landing,LandingPage,LandingPage,seo_title,"Quantify Codex, Claude Code & Gemini CLI Usage",,active
+landing.seo.summary,landing,LandingPage,LandingPage,seo_summary,"VibeScore is a token usage tracker built for AI CLI users (Codex, Claude, Gemini) who want a fast, reliable view of token spend.",,active
+landing.seo.point1,landing,LandingPage,LandingPage,seo_point_1,"Auto-track AI CLI token usage with zero manual steps.",,active
 landing.seo.point2,landing,LandingPage,LandingPage,seo_point_2,"Matrix-style interface that highlights the signals you care about.",,active
-landing.seo.point3,landing,LandingPage,LandingPage,seo_point_3,"Codex CLI token leaderboard to compare usage and rank.",,active
-landing.seo.roadmap,landing,LandingPage,LandingPage,seo_roadmap,"Designed to expand to other runtimes, including Claude Code.",,active
+landing.seo.point3,landing,LandingPage,LandingPage,seo_point_3,"Universal AI CLI leaderboard to compare usage and rank.",,active
+landing.seo.roadmap,landing,LandingPage,LandingPage,seo_roadmap,"Native support for Codex, Claude Code, and Gemini CLI.",,active
 landing.signal.identity_probe,landing,LandingPage,SignalBox,title,"Identity_Probe",,active
 landing.signal.live_sniffer,landing,LandingPage,SignalBox,title,"LIVE_SNIFFER",,active
 landing.handle.label,landing,LandingPage,LandingPage,handle_label,"Set_Handle",,active
@@ -239,7 +239,7 @@ dashboard.install.subtitle,dashboard,DashboardPage,AsciiBox,subtitle,"CLI",,acti
 dashboard.install.headline,dashboard,DashboardPage,AsciiBox,headline,">> START_HERE: INSTALL_CLI",,active
 dashboard.install.step1,dashboard,DashboardPage,AsciiBox,install_step,"1) run",,active
 dashboard.install.cmd.init,dashboard,DashboardPage,AsciiBox,install_cmd,"npx --yes @vibescore/tracker init",,active
-dashboard.install.step2,dashboard,DashboardPage,AsciiBox,install_step,"2) use Codex CLI normally",,active
+dashboard.install.step2,dashboard,DashboardPage,AsciiBox,install_step,"2) use Codex, Claude Code or Gemini CLI normally",,active
 dashboard.install.step3,dashboard,DashboardPage,AsciiBox,install_step,"3) wait for auto sync (or run",,active
 dashboard.install.cmd.sync,dashboard,DashboardPage,AsciiBox,install_cmd,"npx --yes @vibescore/tracker sync",,active
 dashboard.install.step3_suffix,dashboard,DashboardPage,AsciiBox,install_step_suffix,")",,active
@@ -250,7 +250,7 @@ dashboard.activity.range,dashboard,DashboardPage,AsciiBox,range_label,"Range: {{
 
 dashboard.daily.title,dashboard,DashboardPage,AsciiBox,title,"DETAILS",,active
 dashboard.daily.subtitle,dashboard,DashboardPage,AsciiBox,subtitle,"Sortable",,active
-dashboard.daily.empty,dashboard,DashboardPage,AsciiBox,empty_state,"No data yet. Use Codex CLI then run {{cmd}}.",,active
+dashboard.daily.empty,dashboard,DashboardPage,AsciiBox,empty_state,"No data yet. Use your AI CLI then run {{cmd}}.",,active
 
 dashboard.identity.title,dashboard,DashboardPage,IdentityCard,title,"Identity_Core",,active
 dashboard.identity.subtitle,dashboard,DashboardPage,IdentityCard,subtitle,"Authorized",,active
@@ -258,10 +258,10 @@ dashboard.identity.fallback,dashboard,DashboardPage,IdentityCard,handle_fallback
 
 live_sniffer.log.system,ui,LiveSniffer,LiveSniffer,log,"[SYSTEM] KERNEL_LINK_ESTABLISHED",,active
 live_sniffer.log.socket,ui,LiveSniffer,LiveSniffer,log,"[SOCKET] LISTENING_ON_LOCAL_CLI_PIPE...",,active
-live_sniffer.event.intercepted,ui,LiveSniffer,LiveSniffer,event,"> INTERCEPTED: CODEX_COMPLETION_EVENT",,active
+live_sniffer.event.intercepted,ui,LiveSniffer,LiveSniffer,event,"> INTERCEPTED: AI_COMPLETION_EVENT",,active
 live_sniffer.event.quantifying,ui,LiveSniffer,LiveSniffer,event,"> QUANTIFYING: +64 NEURAL_TOKENS",,active
 live_sniffer.event.analysis,ui,LiveSniffer,LiveSniffer,event,"> ANALYSIS: HIGH_VIBE_FLOW_DETECTED",,active
 live_sniffer.event.sync,ui,LiveSniffer,LiveSniffer,event,"> SYNC: UPLOADING_TO_CORE_RELAY",,active
 live_sniffer.event.batch,ui,LiveSniffer,LiveSniffer,event,"[STATUS] BATCH_TRANSMISSION_COMPLETE",,active
-live_sniffer.event.hooking,ui,LiveSniffer,LiveSniffer,event,"> HOOKING: CODEX_CLI_PIPE_LINK",,active
+live_sniffer.event.hooking,ui,LiveSniffer,LiveSniffer,event,"> HOOKING: AI_CLI_PIPE_LINK",,active
 live_sniffer.event.capture,ui,LiveSniffer,LiveSniffer,event,"> CAPTURE: +128 NEURAL_TOKENS",,active
