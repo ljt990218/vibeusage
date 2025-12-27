@@ -17,6 +17,9 @@ export const NeuralAdaptiveFleet = React.memo(function NeuralAdaptiveFleet({
     if (val >= 1000) return (val / 1000).toFixed(1) + "K";
     return val.toString();
   };
+  const usageLabel = copy("dashboard.model_breakdown.usage_label", {
+    value: formatVolume(usage),
+  });
 
   return (
     <div className="w-full space-y-4">
@@ -26,7 +29,7 @@ export const NeuralAdaptiveFleet = React.memo(function NeuralAdaptiveFleet({
             {label}
           </span>
           <span className="text-[9px] font-mono text-[#00FF41]/60 tracking-wider">
-            Usage: {formatVolume(usage)}
+            {usageLabel}
           </span>
         </div>
         <div className="flex items-baseline space-x-1">
