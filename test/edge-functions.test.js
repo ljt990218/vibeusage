@@ -1515,3 +1515,90 @@ test('vibescore-user-status returns pro.active for cutoff user', async () => {
   assert.equal(body.pro.active, true);
   assert.equal(body.pro.sources.includes('registration_cutoff'), true);
 });
+
+test('vibescore-entitlements rejects non-admin caller', async () => {
+  const fn = require('../insforge-functions/vibescore-entitlements');
+
+  const userJwt = 'user_jwt_test';
+
+  globalThis.createClient = () => {
+    throw new Error('Unexpected createClient');
+  };
+
+  const req = new Request('http://localhost/functions/vibescore-entitlements', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userJwt}` },
+    body: JSON.stringify({})
+  });
+
+  const res = await fn(req);
+  assert.equal(res.status, 401);
+});
+
+test('vibescore-entitlements inserts entitlement (admin)', async () => {
+  const fn = require('../insforge-functions/vibescore-entitlements');
+
+  const db = createServiceDbMock();
+  const userId = '22222222-2222-2222-2222-222222222222';
+
+  globalThis.createClient = (args) => {
+    if (args && args.edgeFunctionToken === SERVICE_ROLE_KEY) {
+      return { database: db.db };
+    }
+    throw new Error(`Unexpected createClient args: ${JSON.stringify(args)}`);
+  };
+
+  const req = new Request('http://localhost/functions/vibescore-entitlements', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+    body: JSON.stringify({
+      user_id: userId,
+      source: 'manual',
+      effective_from: '2025-01-01T00:00:00Z',
+      effective_to: '2124-01-01T00:00:00Z',
+      note: 'test'
+    })
+  });
+
+  const res = await fn(req);
+  assert.equal(res.status, 200);
+  const body = await res.json();
+
+  assert.equal(body.user_id, userId);
+  assert.equal(body.source, 'manual');
+  assert.equal(body.note, 'test');
+  assert.equal(db.inserts.length, 1);
+  assert.equal(db.inserts[0].table, 'vibescore_user_entitlements');
+  assert.equal(db.inserts[0].rows[0].user_id, userId);
+});
+
+test('vibescore-entitlements-revoke updates revoked_at (admin)', async () => {
+  const fn = require('../insforge-functions/vibescore-entitlements-revoke');
+
+  const db = createServiceDbMock();
+  const entitlementId = '33333333-3333-3333-3333-333333333333';
+
+  globalThis.createClient = (args) => {
+    if (args && args.edgeFunctionToken === SERVICE_ROLE_KEY) {
+      return { database: db.db };
+    }
+    throw new Error(`Unexpected createClient args: ${JSON.stringify(args)}`);
+  };
+
+  const req = new Request('http://localhost/functions/vibescore-entitlements-revoke', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+    body: JSON.stringify({ id: entitlementId })
+  });
+
+  const res = await fn(req);
+  assert.equal(res.status, 200);
+  const body = await res.json();
+
+  assert.equal(body.id, entitlementId);
+  assert.equal(typeof body.revoked_at, 'string');
+  assert.equal(db.updates.length, 1);
+  assert.equal(db.updates[0].table, 'vibescore_user_entitlements');
+  assert.equal(db.updates[0].where.col, 'id');
+  assert.equal(db.updates[0].where.value, entitlementId);
+});
