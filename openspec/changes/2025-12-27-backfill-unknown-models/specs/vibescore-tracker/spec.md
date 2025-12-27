@@ -1,5 +1,5 @@
-## MODIFIED Requirements
-### Requirement: Missing model uses fallback
+## ADDED Requirements
+### Requirement: Unknown model backfill within half-hour buckets
 The system SHALL set `model = "unknown"` only when no known model exists within the same source + half-hour bucket; when any known model exists, the system SHALL reassign unknown totals to the dominant known model and SHALL NOT emit an unknown bucket for that half-hour. For `every-code`, if the bucket remains unknown after same-source backfill, the system SHALL attempt alignment to the nearest `codex` dominant model; if none exists, it SHALL keep `unknown`.
 
 #### Scenario: Unknown preserved when no known model exists
@@ -19,7 +19,6 @@ The system SHALL set `model = "unknown"` only when no known model exists within 
 - **WHEN** the user runs `npx @vibescore/tracker sync`
 - **THEN** the every-code bucket SHALL use the dominant known model from that codex bucket
 
-## ADDED Requirements
 ### Requirement: Known models remain separate during unknown backfill
 The system SHALL NOT merge known models when reassigning unknown totals.
 

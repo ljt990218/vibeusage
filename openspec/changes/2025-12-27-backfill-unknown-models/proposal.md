@@ -30,3 +30,7 @@
 
 ## Rollout / Milestones
 - Update spec delta, implement parser changes, add tests, verify via node --test.
+
+## Docs
+- Module brief: module-brief.md
+- Requirements analysis: requirements-analysis.md

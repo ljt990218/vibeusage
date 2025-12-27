@@ -1,5 +1,5 @@
 ## 1. Spec
-- [ ] Add spec delta for unknown backfill rules and deterministic tie-breaker.
+- [x] Add spec delta for unknown backfill rules and deterministic tie-breaker.
 
 ## 2. CLI Parser
 - [x] Track per-bucket model totals (including unknown) during rollout parsing.
@@ -13,7 +13,7 @@
 - [x] Run parser regression tests and record results.
 
 ## 4. Docs
-- [ ] Link design doc and backfill notes (optional) if needed.
+- [x] Link design doc and backfill notes (optional) if needed.
 
 ## 5. Verification
 - [x] Update verification-report.md with commands and results.
