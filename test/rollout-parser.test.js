@@ -679,6 +679,94 @@ test('parseRolloutIncremental breaks ties by earlier codex bucket', async () => 
   }
 });
 
+test('parseRolloutIncremental retracts prior every-code alignment when target changes', async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'vibescore-rollout-'));
+  try {
+    const codexPath = path.join(tmp, 'rollout-codex.jsonl');
+    const everyPath = path.join(tmp, 'rollout-every.jsonl');
+    const queuePath = path.join(tmp, 'queue.jsonl');
+    const cursors = { version: 1, files: {}, updatedAt: null };
+
+    const codexUsage1 = { input_tokens: 1, cached_input_tokens: 0, output_tokens: 1, reasoning_output_tokens: 0, total_tokens: 2 };
+    const codexUsage2 = { input_tokens: 2, cached_input_tokens: 0, output_tokens: 0, reasoning_output_tokens: 0, total_tokens: 2 };
+    const codexTotals2 = {
+      input_tokens: codexUsage1.input_tokens + codexUsage2.input_tokens,
+      cached_input_tokens: 0,
+      output_tokens: codexUsage1.output_tokens + codexUsage2.output_tokens,
+      reasoning_output_tokens: 0,
+      total_tokens: codexUsage1.total_tokens + codexUsage2.total_tokens
+    };
+
+    const everyUsage1 = { input_tokens: 1, cached_input_tokens: 0, output_tokens: 0, reasoning_output_tokens: 0, total_tokens: 1 };
+    const everyUsage2 = { input_tokens: 1, cached_input_tokens: 0, output_tokens: 0, reasoning_output_tokens: 0, total_tokens: 1 };
+    const everyTotals2 = {
+      input_tokens: everyUsage1.input_tokens + everyUsage2.input_tokens,
+      cached_input_tokens: 0,
+      output_tokens: 0,
+      reasoning_output_tokens: 0,
+      total_tokens: everyUsage1.total_tokens + everyUsage2.total_tokens
+    };
+
+    const codexLines = [
+      buildTurnContextLine({ model: 'gpt-4o-mini' }),
+      buildTokenCountLine({ ts: '2025-12-17T01:00:00.000Z', last: codexUsage1, total: codexUsage1 })
+    ];
+    const everyLines = [
+      buildTokenCountLine({ ts: '2025-12-17T00:30:00.000Z', last: everyUsage1, total: everyUsage1 })
+    ];
+
+    await fs.writeFile(codexPath, codexLines.join('\n') + '\n', 'utf8');
+    await fs.writeFile(everyPath, everyLines.join('\n') + '\n', 'utf8');
+
+    let res = await parseRolloutIncremental({
+      rolloutFiles: [
+        { path: codexPath, source: 'codex' },
+        { path: everyPath, source: 'every-code' }
+      ],
+      cursors,
+      queuePath
+    });
+    assert.equal(res.bucketsQueued, 2);
+
+    let queued = await readJsonLines(queuePath);
+    let everyRows = queued.filter((row) => row.source === 'every-code');
+    assert.equal(everyRows.length, 1);
+    assert.equal(everyRows[0].model, 'gpt-4o-mini');
+
+    const codexAppend = [
+      buildTurnContextLine({ model: 'gpt-4o' }),
+      buildTokenCountLine({ ts: '2025-12-17T00:00:00.000Z', last: codexUsage2, total: codexTotals2 })
+    ];
+    const everyAppend = [
+      buildTokenCountLine({ ts: '2025-12-17T00:30:00.000Z', last: everyUsage2, total: everyTotals2 })
+    ];
+
+    await fs.appendFile(codexPath, codexAppend.join('\n') + '\n', 'utf8');
+    await fs.appendFile(everyPath, everyAppend.join('\n') + '\n', 'utf8');
+
+    res = await parseRolloutIncremental({
+      rolloutFiles: [
+        { path: codexPath, source: 'codex' },
+        { path: everyPath, source: 'every-code' }
+      ],
+      cursors,
+      queuePath
+    });
+    assert.equal(res.bucketsQueued, 3);
+
+    queued = await readJsonLines(queuePath);
+    everyRows = queued.filter((row) => row.source === 'every-code' && row.hour_start === '2025-12-17T00:30:00.000Z');
+    const byModel = new Map();
+    for (const row of everyRows) {
+      byModel.set(row.model, row);
+    }
+    assert.equal(byModel.get('gpt-4o-mini')?.total_tokens, 0);
+    assert.equal(byModel.get('gpt-4o')?.total_tokens, everyTotals2.total_tokens);
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
 test('parseClaudeIncremental aggregates usage into half-hour buckets', async () => {
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'vibescore-claude-'));
   try {
