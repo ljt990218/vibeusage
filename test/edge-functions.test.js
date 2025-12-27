@@ -5,6 +5,20 @@ const SERVICE_ROLE_KEY = 'srk_test_123';
 const ANON_KEY = 'anon_test_123';
 const BASE_URL = 'http://insforge:7130';
 
+function toBase64Url(value) {
+  return Buffer.from(value, 'utf8')
+    .toString('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+}
+
+function createJwt(payload) {
+  const header = toBase64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const body = toBase64Url(JSON.stringify(payload));
+  return `${header}.${body}.signature`;
+}
+
 function setDenoEnv(env) {
   globalThis.Deno = {
     env: {
@@ -1691,6 +1705,35 @@ test('vibescore-entitlements inserts entitlement (admin)', async () => {
   assert.equal(db.inserts[0].rows[0].user_id, userId);
 });
 
+test('vibescore-entitlements accepts project_admin token', async () => {
+  const fn = require('../insforge-functions/vibescore-entitlements');
+
+  const db = createServiceDbMock();
+  const userId = '44444444-4444-4444-4444-444444444444';
+  const projectAdminJwt = createJwt({ role: 'project_admin' });
+
+  globalThis.createClient = (args) => {
+    if (args && args.edgeFunctionToken === projectAdminJwt) {
+      return { database: db.db };
+    }
+    throw new Error(`Unexpected createClient args: ${JSON.stringify(args)}`);
+  };
+
+  const req = new Request('http://localhost/functions/vibescore-entitlements', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${projectAdminJwt}` },
+    body: JSON.stringify({
+      user_id: userId,
+      source: 'manual',
+      effective_from: '2025-01-01T00:00:00Z',
+      effective_to: '2124-01-01T00:00:00Z'
+    })
+  });
+
+  const res = await fn(req);
+  assert.equal(res.status, 200);
+});
+
 test('vibescore-entitlements-revoke updates revoked_at (admin)', async () => {
   const fn = require('../insforge-functions/vibescore-entitlements-revoke');
 
@@ -1720,4 +1763,28 @@ test('vibescore-entitlements-revoke updates revoked_at (admin)', async () => {
   assert.equal(db.updates[0].table, 'vibescore_user_entitlements');
   assert.equal(db.updates[0].where.col, 'id');
   assert.equal(db.updates[0].where.value, entitlementId);
+});
+
+test('vibescore-entitlements-revoke accepts project_admin token', async () => {
+  const fn = require('../insforge-functions/vibescore-entitlements-revoke');
+
+  const db = createServiceDbMock();
+  const entitlementId = '55555555-5555-5555-5555-555555555555';
+  const projectAdminJwt = createJwt({ role: 'project_admin' });
+
+  globalThis.createClient = (args) => {
+    if (args && args.edgeFunctionToken === projectAdminJwt) {
+      return { database: db.db };
+    }
+    throw new Error(`Unexpected createClient args: ${JSON.stringify(args)}`);
+  };
+
+  const req = new Request('http://localhost/functions/vibescore-entitlements-revoke', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${projectAdminJwt}` },
+    body: JSON.stringify({ id: entitlementId })
+  });
+
+  const res = await fn(req);
+  assert.equal(res.status, 200);
 });

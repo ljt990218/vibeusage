@@ -118,6 +118,23 @@ var require_auth = __commonJS({
         return null;
       }
     }
+    function getJwtRole(token) {
+      const payload = decodeJwtPayload(token);
+      const role = payload?.role;
+      if (typeof role === "string" && role.length > 0) return role;
+      const appRole = payload?.app_metadata?.role;
+      if (typeof appRole === "string" && appRole.length > 0) return appRole;
+      const roles = payload?.app_metadata?.roles;
+      if (Array.isArray(roles)) {
+        const match = roles.find((value) => typeof value === "string" && value.length > 0);
+        if (match) return match;
+      }
+      return null;
+    }
+    function isProjectAdminBearer2(token) {
+      const role = getJwtRole(token);
+      return role === "project_admin";
+    }
     function isJwtExpired(payload) {
       const exp = Number(payload?.exp);
       if (!Number.isFinite(exp)) return false;
@@ -146,14 +163,15 @@ var require_auth = __commonJS({
     module2.exports = {
       getBearerToken: getBearerToken2,
       getEdgeClientAndUserId,
-      getEdgeClientAndUserIdFast
+      getEdgeClientAndUserIdFast,
+      isProjectAdminBearer: isProjectAdminBearer2
     };
   }
 });
 
 // insforge-src/functions/vibescore-entitlements.js
 var { handleOptions, json, requireMethod, readJson } = require_http();
-var { getBearerToken } = require_auth();
+var { getBearerToken, isProjectAdminBearer } = require_auth();
 var { getBaseUrl, getAnonKey, getServiceRoleKey } = require_env();
 var ALLOWED_SOURCES = /* @__PURE__ */ new Set(["paid", "override", "manual"]);
 module.exports = async function(request) {
@@ -164,8 +182,9 @@ module.exports = async function(request) {
   const bearer = getBearerToken(request.headers.get("Authorization"));
   if (!bearer) return json({ error: "Missing bearer token" }, 401);
   const serviceRoleKey = getServiceRoleKey();
-  if (!serviceRoleKey) return json({ error: "Admin key missing" }, 500);
-  if (bearer !== serviceRoleKey) return json({ error: "Unauthorized" }, 401);
+  const isServiceRole = Boolean(serviceRoleKey && bearer === serviceRoleKey);
+  const isProjectAdmin = isProjectAdminBearer(bearer);
+  if (!isServiceRole && !isProjectAdmin) return json({ error: "Unauthorized" }, 401);
   const body = await readJson(request);
   if (body.error) return json({ error: body.error }, body.status);
   const data = body.data || {};
@@ -182,12 +201,13 @@ module.exports = async function(request) {
   if (Date.parse(effectiveFrom) >= Date.parse(effectiveTo)) {
     return json({ error: "effective_to must be after effective_from" }, 400);
   }
-  const baseUrl = getBaseUrl();
   const anonKey = getAnonKey();
+  if (!anonKey && !serviceRoleKey) return json({ error: "Admin key missing" }, 500);
+  const baseUrl = getBaseUrl();
   const dbClient = createClient({
     baseUrl,
     anonKey: anonKey || serviceRoleKey,
-    edgeFunctionToken: serviceRoleKey
+    edgeFunctionToken: isServiceRole ? serviceRoleKey : bearer
   });
   const nowIso = (/* @__PURE__ */ new Date()).toISOString();
   const row = {

@@ -4,7 +4,7 @@
 'use strict';
 
 const { handleOptions, json, requireMethod, readJson } = require('../shared/http');
-const { getBearerToken } = require('../shared/auth');
+const { getBearerToken, isProjectAdminBearer } = require('../shared/auth');
 const { getBaseUrl, getAnonKey, getServiceRoleKey } = require('../shared/env');
 
 const ALLOWED_SOURCES = new Set(['paid', 'override', 'manual']);
@@ -20,8 +20,9 @@ module.exports = async function(request) {
   if (!bearer) return json({ error: 'Missing bearer token' }, 401);
 
   const serviceRoleKey = getServiceRoleKey();
-  if (!serviceRoleKey) return json({ error: 'Admin key missing' }, 500);
-  if (bearer !== serviceRoleKey) return json({ error: 'Unauthorized' }, 401);
+  const isServiceRole = Boolean(serviceRoleKey && bearer === serviceRoleKey);
+  const isProjectAdmin = isProjectAdminBearer(bearer);
+  if (!isServiceRole && !isProjectAdmin) return json({ error: 'Unauthorized' }, 401);
 
   const body = await readJson(request);
   if (body.error) return json({ error: body.error }, body.status);
@@ -42,12 +43,14 @@ module.exports = async function(request) {
     return json({ error: 'effective_to must be after effective_from' }, 400);
   }
 
-  const baseUrl = getBaseUrl();
   const anonKey = getAnonKey();
+  if (!anonKey && !serviceRoleKey) return json({ error: 'Admin key missing' }, 500);
+
+  const baseUrl = getBaseUrl();
   const dbClient = createClient({
     baseUrl,
     anonKey: anonKey || serviceRoleKey,
-    edgeFunctionToken: serviceRoleKey
+    edgeFunctionToken: isServiceRole ? serviceRoleKey : bearer
   });
 
   const nowIso = new Date().toISOString();
