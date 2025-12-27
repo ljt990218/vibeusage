@@ -2,6 +2,8 @@ key,module,page,component,slot,text,notes,status
 shared.placeholder.short,shared,*,*,placeholder_short,"--",,active
 shared.placeholder.anon_mark,shared,*,*,placeholder_anon_mark,"?",,active
 shared.unit.percent,shared,*,*,unit_percent,"%",,active
+shared.unit.thousand_abbrev,shared,*,*,unit_thousand_abbrev,"K",,active
+shared.unit.million_abbrev,shared,*,*,unit_million_abbrev,"M",,active
 shared.button.sign_in,shared,*,MatrixButton,label,"$ sign-in",,active
 shared.button.sign_up,shared,*,MatrixButton,label,"$ sign-up",,active
 shared.range.simple,shared,*,*,label,"Range: {{range}}",,active

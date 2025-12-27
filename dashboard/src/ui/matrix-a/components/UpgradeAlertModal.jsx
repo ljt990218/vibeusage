@@ -1,5 +1,10 @@
 import React, { useState } from "react";
 import { copy } from "../../../lib/copy.js";
+import {
+  safeGetItem,
+  safeSetItem,
+  safeWriteClipboard,
+} from "../../../lib/safe-browser.js";
 
 export function UpgradeAlertModal({
   currentVersion = "0.1",
@@ -24,19 +29,20 @@ export function UpgradeAlertModal({
   const [isVisible, setIsVisible] = useState(() => {
     // If running on server, default to true (or handle hydration mismatch)
     if (typeof window === "undefined") return true;
-    return !localStorage.getItem(storageKey);
+    return !safeGetItem(storageKey);
   });
 
   if (!isVisible) return null;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(resolvedInstallCommand);
+  const handleCopy = async () => {
+    const didCopy = await safeWriteClipboard(resolvedInstallCommand);
+    if (!didCopy) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDismiss = () => {
-    localStorage.setItem(storageKey, "true");
+    safeSetItem(storageKey, "true");
     setIsVisible(false);
     if (onClose) onClose();
   };
