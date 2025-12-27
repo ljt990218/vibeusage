@@ -12,6 +12,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .code/
+.worktrees/
 
 # Local-only snapshots and experiments
 /backups/
