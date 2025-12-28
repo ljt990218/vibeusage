@@ -20,6 +20,7 @@ const PATHS = {
   usageMonthly: "vibescore-usage-monthly",
   usageHeatmap: "vibescore-usage-heatmap",
   usageModelBreakdown: "vibescore-usage-model-breakdown",
+  linkCodeInit: "vibescore-link-code-init",
 };
 
 const FUNCTION_PREFIX = "/functions";
@@ -191,6 +192,20 @@ export async function getUsageHeatmap({
   });
 }
 
+export async function requestInstallLinkCode({ baseUrl } = {}) {
+  if (isMockEnabled()) {
+    return {
+      link_code: "mock_link_code",
+      expires_at: new Date(Date.now() + 10 * 60_000).toISOString(),
+    };
+  }
+  return requestPostJson({
+    baseUrl,
+    slug: PATHS.linkCodeInit,
+    body: {},
+  });
+}
+
 function buildTimeZoneParams({ timeZone, tzOffsetMinutes } = {}) {
   const params = {};
   const tz = typeof timeZone === "string" ? timeZone.trim() : "";
@@ -245,6 +260,44 @@ async function requestJson({
   }
 }
 
+async function requestPostJson({
+  baseUrl,
+  slug,
+  body,
+  fetchOptions,
+  errorPrefix,
+  retry,
+}) {
+  const client = getInsforgeClient({ baseUrl });
+  const http = client.getHttpClient();
+  const retryOptions = normalizeRetryOptions(retry, "POST");
+  let attempt = 0;
+  const { primaryPath, fallbackPath } = buildFunctionPaths(slug);
+
+  while (true) {
+    try {
+      const sessionResult = await ensureInsforgeSession({ baseUrl });
+      if (sessionResult?.error) throw sessionResult.error;
+      if (!sessionResult?.session) throw createUnauthorizedError();
+      return await requestWithFallbackPost({
+        http,
+        baseUrl,
+        primaryPath,
+        fallbackPath,
+        body,
+        fetchOptions,
+      });
+    } catch (e) {
+      if (e?.name === "AbortError") throw e;
+      const err = normalizeSdkError(e, errorPrefix);
+      if (!shouldRetry({ err, attempt, retryOptions })) throw err;
+      const delayMs = computeRetryDelayMs({ retryOptions, attempt });
+      await sleep(delayMs);
+      attempt += 1;
+    }
+  }
+}
+
 function buildFunctionPaths(slug) {
   const normalized = normalizeFunctionSlug(slug);
   const primaryPath = `${normalizePrefix(FUNCTION_PREFIX)}/${normalized}`;
@@ -274,6 +327,54 @@ async function requestWithFallback({
   } catch (err) {
     if (!shouldFallbackToLegacy(err, primaryPath)) throw err;
     return await http.get(fallbackPath, { params, ...(fetchOptions || {}) });
+  }
+}
+
+async function requestWithFallbackPost({
+  http,
+  baseUrl,
+  primaryPath,
+  fallbackPath,
+  body,
+  fetchOptions,
+}) {
+  try {
+    return await requestWithAuthRetryPost({
+      http,
+      baseUrl,
+      path: primaryPath,
+      body,
+      fetchOptions,
+    });
+  } catch (err) {
+    if (!shouldFallbackToLegacy(err, primaryPath)) throw err;
+    return await requestWithAuthRetryPost({
+      http,
+      baseUrl,
+      path: fallbackPath,
+      body,
+      fetchOptions,
+    });
+  }
+}
+
+async function requestWithAuthRetryPost({
+  http,
+  baseUrl,
+  path,
+  body,
+  fetchOptions,
+}) {
+  try {
+    return await http.post(path, body, { ...(fetchOptions || {}) });
+  } catch (err) {
+    if (!isUnauthorized(err)) throw err;
+    const refreshed = await refreshInsforgeSession({ baseUrl });
+    if (refreshed?.session) {
+      return await http.post(path, body, { ...(fetchOptions || {}) });
+    }
+    await clearInsforgeSession({ baseUrl });
+    throw err;
   }
 }
 
