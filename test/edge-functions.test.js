@@ -1835,6 +1835,9 @@ test('vibescore-link-code-init issues a short-lived link code', async () => {
         database: db.db
       };
     }
+    if (args && args.edgeFunctionToken === SERVICE_ROLE_KEY) {
+      return { database: db.db };
+    }
     throw new Error(`Unexpected createClient args: ${JSON.stringify(args)}`);
   };
 
@@ -1869,14 +1872,13 @@ test('vibescore-link-code-exchange calls rpc with hash and returns device token'
 
   const linkCode = 'link_code_test';
   const requestId = 'req_123';
-  const token = 'token_abc';
   const deviceId = 'device_abc';
   const userId = '77777777-7777-7777-7777-777777777777';
 
   const calls = [];
   globalThis.fetch = async (url, init) => {
     calls.push({ url, init });
-    return new Response(JSON.stringify({ token, device_id: deviceId, user_id: userId }), {
+    return new Response(JSON.stringify({ device_id: deviceId, user_id: userId }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -1892,14 +1894,17 @@ test('vibescore-link-code-exchange calls rpc with hash and returns device token'
   assert.equal(res.status, 200);
   const body = await res.json();
 
-  assert.equal(body.token, token);
+  const codeHash = createHash('sha256').update(linkCode).digest('hex');
+  const expectedToken = createHash('sha256')
+    .update(`${SERVICE_ROLE_KEY}:${codeHash}:${requestId}`)
+    .digest('hex');
+  assert.equal(body.token, expectedToken);
   assert.equal(body.device_id, deviceId);
   assert.equal(body.user_id, userId);
 
   assert.equal(calls.length, 1);
   assert.ok(String(calls[0].url).includes('/api/database/rpc/vibescore_exchange_link_code'));
   const payload = JSON.parse(calls[0].init?.body || '{}');
-  const expectedHash = createHash('sha256').update(linkCode).digest('hex');
-  assert.equal(payload.code_hash, expectedHash);
+  assert.equal(payload.code_hash, codeHash);
   assert.equal(payload.request_id, requestId);
 });
