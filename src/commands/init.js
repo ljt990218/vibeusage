@@ -34,6 +34,7 @@ async function cmdInit(argv) {
 
   const configPath = path.join(trackerDir, 'config.json');
   const notifyOriginalPath = path.join(trackerDir, 'codex_notify_original.json');
+  const linkCodeStatePath = path.join(trackerDir, 'link_code_state.json');
 
   const baseUrl = opts.baseUrl || process.env.VIBESCORE_INSFORGE_BASE_URL || 'https://5tmappuk.us-east.insforge.app';
   let dashboardUrl = opts.dashboardUrl || process.env.VIBESCORE_DASHBOARD_URL || null;
@@ -52,16 +53,32 @@ async function cmdInit(argv) {
   if (!deviceToken && opts.linkCode) {
     const deviceName = opts.deviceName || os.hostname();
     const platform = normalizePlatform(process.platform);
-    const requestId = crypto.randomUUID();
+    const linkCode = String(opts.linkCode);
+    const linkCodeHash = crypto.createHash('sha256').update(linkCode).digest('hex');
+    const existingLinkState = await readJson(linkCodeStatePath);
+    let requestId =
+      existingLinkState?.linkCodeHash === linkCodeHash && existingLinkState?.requestId
+        ? existingLinkState.requestId
+        : null;
+    if (!requestId) {
+      requestId = crypto.randomUUID();
+      await writeJson(linkCodeStatePath, {
+        linkCodeHash,
+        requestId,
+        createdAt: new Date().toISOString()
+      });
+      await chmod600IfPossible(linkCodeStatePath);
+    }
     const issued = await issueDeviceTokenWithLinkCode({
       baseUrl,
-      linkCode: opts.linkCode,
+      linkCode,
       requestId,
       deviceName,
       platform
     });
     deviceToken = issued.token;
     deviceId = issued.deviceId;
+    await fs.rm(linkCodeStatePath, { force: true });
   } else if (!deviceToken && !opts.noAuth) {
     const deviceName = opts.deviceName || os.hostname();
 
