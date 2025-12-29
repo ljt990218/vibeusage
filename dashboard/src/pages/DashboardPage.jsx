@@ -612,21 +612,14 @@ export function DashboardPage({
 
   const installInitCmdBase = copy("dashboard.install.cmd.init");
   const resolvedLinkCode = !linkCodeExpired ? linkCode : null;
-  const installOpencodeCmd = copy("dashboard.install.opencode_cmd");
-  const installInitCmdDisplay = [installOpencodeCmd, installInitCmdBase]
-    .filter(Boolean)
-    .join(" && ");
-  const installInitCmdCopy = [
-    installOpencodeCmd,
-    resolvedLinkCode
-      ? copy("dashboard.install.cmd.init_link_code", {
-          link_code: resolvedLinkCode,
-        })
-      : installInitCmdBase,
-  ]
-    .filter(Boolean)
-    .join(" && ");
+  const installInitCmdDisplay = installInitCmdBase;
+  const installInitCmdCopy = resolvedLinkCode
+    ? copy("dashboard.install.cmd.init_link_code", {
+        link_code: resolvedLinkCode,
+      })
+    : installInitCmdBase;
   const installSyncCmd = copy("dashboard.install.cmd.sync");
+  const installOpencodeCmd = copy("dashboard.install.opencode_cmd");
   const installCopyLabel = resolvedLinkCode
     ? copy("dashboard.install.copy")
     : copy("dashboard.install.copy_base");
@@ -669,12 +662,12 @@ export function DashboardPage({
         className: "px-1 py-0.5 bg-black/40 border border-[#00FF41]/20",
       },
       {
-        text: `\n${copy("dashboard.install.step2")}\n${copy(
+        text: `\n${installOpencodeCmd}\n${copy("dashboard.install.step2")}\n${copy(
           "dashboard.install.step3"
         )}`,
       },
     ],
-    [installInitCmdDisplay]
+    [installInitCmdDisplay, installOpencodeCmd]
   );
 
   const handleCopyInstall = useCallback(async () => {
