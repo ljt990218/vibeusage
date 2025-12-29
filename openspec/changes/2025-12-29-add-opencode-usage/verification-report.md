@@ -7,10 +7,12 @@
 ## Tests Run
 - `node --test test/rollout-parser.test.js test/init-uninstall.test.js`
 - `node scripts/validate-copy-registry.cjs` (warnings only; no errors)
+- `node scripts/acceptance/opencode-plugin-install.cjs`
 
 ## Results
 - Passed.
 - Copy registry check passed with warnings for unused keys.
+- Opencode plugin acceptance passed.
 
 ## Evidence
 - Added Opencode parser coverage and plugin install/uninstall coverage in the test suite.

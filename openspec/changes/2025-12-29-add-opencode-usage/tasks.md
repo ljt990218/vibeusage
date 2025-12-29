@@ -12,7 +12,12 @@
 ## 3. Tests
 - [x] Parser: Opencode message tokens aggregate into half-hour buckets.
 - [x] Init/uninstall: Opencode plugin added and removed while preserving other plugins.
+- [x] Acceptance: Opencode plugin install/uninstall script.
 
 ## 4. Verification
 - [x] `node --test test/rollout-parser.test.js test/init-uninstall.test.js`
 - [ ] Local smoke: run `node bin/tracker.js init --no-auth --no-open`, end an Opencode session, confirm `queue.jsonl` grows, then `node bin/tracker.js sync --auto` uploads.
+- [x] `node scripts/acceptance/opencode-plugin-install.cjs`
+
+## 5. PR Gate
+- [x] Freeze record entry added to `docs/deployment/freeze.md`.
