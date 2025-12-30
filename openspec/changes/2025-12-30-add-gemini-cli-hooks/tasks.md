@@ -19,4 +19,4 @@
 - [x] `node scripts/acceptance/gemini-hook-install.cjs`
 
 ## 5. PR Gate
-- [x] Freeze record entry added to `docs/deployment/freeze.md`.
+- [ ] Freeze record entry added to `docs/deployment/freeze.md`.
