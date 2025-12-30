@@ -75,6 +75,15 @@ function isScreenshotModeEnabled() {
   return raw === "1" || raw === "true";
 }
 
+function isProductionHost(hostname) {
+  if (!hostname) return false;
+  return (
+    hostname === "vibescore.space" ||
+    hostname === "www.vibescore.space" ||
+    hostname === "vibescore.vercel.app"
+  );
+}
+
 export function DashboardPage({
   baseUrl,
   auth,
@@ -95,6 +104,19 @@ export function DashboardPage({
     return window.matchMedia("(max-width: 640px)").matches;
   });
   const screenshotMode = useMemo(() => isScreenshotModeEnabled(), []);
+  const wrappedEntryLabel = copy("dashboard.wrapped.entry");
+  const wrappedEntryEnabled = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    return !isProductionHost(window.location.hostname);
+  }, []);
+  const wrappedEntryUrl = useMemo(() => {
+    if (!wrappedEntryEnabled || typeof window === "undefined") return "";
+    const url = new URL("/", window.location.origin);
+    url.searchParams.set("screenshot", "1");
+    return url.toString();
+  }, [wrappedEntryEnabled]);
+  const showWrappedEntry =
+    wrappedEntryEnabled && !screenshotMode && Boolean(wrappedEntryUrl);
   const identityScrambleDurationMs = 2200;
   const [coreIndexCollapsed, setCoreIndexCollapsed] = useState(true);
   const [installCopied, setInstallCopied] = useState(false);
@@ -779,6 +801,19 @@ export function DashboardPage({
 
   const headerRight = (
     <div className="flex items-center gap-4">
+      {showWrappedEntry ? (
+        <MatrixButton
+          as="a"
+          href={wrappedEntryUrl}
+          size="header"
+          aria-label={wrappedEntryLabel}
+          title={wrappedEntryLabel}
+          className="text-[#D8B45A] border-[#D8B45A]/60 hover:border-[#F6D788]"
+          style={{ "--matrix-header-corner": "#D8B45A" }}
+        >
+          {wrappedEntryLabel}
+        </MatrixButton>
+      ) : null}
       <GithubStar isFixed={false} size="header" />
 
       {signedIn ? (

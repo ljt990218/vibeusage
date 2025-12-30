@@ -106,3 +106,10 @@
 #### Scenario: Share page metadata
 - **WHEN** X 抓取分享页元数据
 - **THEN** 返回包含截图图片的 OG/Twitter Card 元数据
+
+### Requirement: Non-production entry for screenshot mode
+系统 SHALL 在非生产环境的 Dashboard 顶部栏提供 “Wrapped 2025” 入口按钮，按钮为金色并指向截图模式 URL，生产环境不显示该入口。
+
+#### Scenario: Entry shown only on non-production host
+- **WHEN** 用户访问非生产环境的 Dashboard
+- **THEN** 顶部栏显示金色 “Wrapped 2025” 入口并跳转到截图模式页面
