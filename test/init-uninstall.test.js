@@ -372,8 +372,12 @@ test('init then uninstall manages Gemini hooks without removing existing hooks',
     const sessionEnd = installed?.hooks?.SessionEnd || [];
     const hooks = flattenHookEntries(sessionEnd);
     const allCommands = hooks.map((h) => h?.command);
+    const trackerEntry = sessionEnd.find(
+      (entry) => Array.isArray(entry?.hooks) && entry.hooks.some((hook) => hook?.command === hookCommand)
+    );
     assert.ok(allCommands.includes(existingCommand), 'expected existing Gemini hook to remain');
     assert.ok(allCommands.includes(hookCommand), 'expected tracker Gemini hook to be added');
+    assert.equal(trackerEntry?.matcher, 'exit|clear|logout|prompt_input_exit|other');
 
     await cmdUninstall([]);
 

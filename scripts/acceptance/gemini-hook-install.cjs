@@ -64,15 +64,23 @@ async function main() {
     process.exit(1);
   }
 
-  const trackerHook = hooks.find(
-    (hook) =>
-      hook?.name === 'vibescore-tracker' &&
-      typeof hook?.command === 'string' &&
-      hook.command.includes('notify.cjs') &&
-      hook.command.includes('--source=gemini')
+  const trackerEntry = sessionEnd.find(
+    (entry) =>
+      Array.isArray(entry?.hooks) &&
+      entry.hooks.some(
+        (hook) =>
+          hook?.name === 'vibescore-tracker' &&
+          typeof hook?.command === 'string' &&
+          hook.command.includes('notify.cjs') &&
+          hook.command.includes('--source=gemini')
+      )
   );
-  if (!trackerHook) {
+  if (!trackerEntry) {
     console.error('Expected tracker Gemini hook to be added.');
+    process.exit(1);
+  }
+  if (trackerEntry.matcher !== 'exit|clear|logout|prompt_input_exit|other') {
+    console.error('Expected tracker matcher to cover all SessionEnd reasons.');
     process.exit(1);
   }
 
