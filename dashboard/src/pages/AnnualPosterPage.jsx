@@ -234,65 +234,69 @@ export function AnnualPosterPage({ baseUrl, auth, signedIn }) {
         <div className="absolute inset-0 opacity-35 bg-[linear-gradient(rgba(0,255,65,0.05)_1px,transparent_1px)] bg-[length:100%_6px]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(0,255,65,0.12),transparent_40%),radial-gradient(circle_at_85%_20%,rgba(255,255,255,0.08),transparent_35%),radial-gradient(circle_at_50%_90%,rgba(0,255,65,0.08),transparent_45%)]" />
 
-        <div className="relative z-10 flex flex-col h-full p-10 gap-8">
-          <header className="flex flex-col gap-3">
-            <h1 className="text-5xl md:text-6xl font-black text-white tracking-[-0.04em] glow-text">
-              {posterTitle}
-            </h1>
-          </header>
+        <div className="relative z-10 flex flex-col h-full p-10">
+          <div className="flex flex-col gap-8 w-full max-w-[720px] mx-auto h-full">
+            <header className="flex flex-col gap-3">
+              <h1 className="text-5xl md:text-6xl font-black text-white tracking-[-0.04em] glow-text">
+                {posterTitle}
+              </h1>
+            </header>
 
-          <div className="grid grid-cols-[1.6fr_1fr] gap-8 flex-1">
-            <div className="flex flex-col gap-8">
-              <UsagePanel
-                title={copy("usage.panel.title")}
-                period="total"
-                periods={[]}
-                metrics={metricsRows}
-                showSummary
-                useSummaryLayout
-                summaryLabel={summaryLabel}
-                summaryValue={summaryValue}
-                summaryCostValue={summaryCostValue}
-                summaryAnimate={false}
-                breakdownCollapsed={false}
-                hideHeader
-                className="min-h-[360px]"
-              />
-
-              <div className="matrix-panel border border-matrix-ghost p-3 h-full min-h-[360px]">
-                <TrendMonitor
-                  rows={trendRows}
-                  from={trendFrom}
-                  to={trendTo}
+            <div className="flex flex-col gap-8 flex-1">
+              <div className="flex flex-col gap-8">
+                <UsagePanel
+                  title={copy("usage.panel.title")}
                   period="total"
-                  timeZoneLabel={timeZoneLabel}
-                  showTimeZoneLabel={false}
-                  className="h-full"
+                  periods={[]}
+                  metrics={metricsRows}
+                  showSummary
+                  useSummaryLayout
+                  summaryLabel={summaryLabel}
+                  summaryValue={summaryValue}
+                  summaryCostValue={summaryCostValue}
+                  summaryAnimate={false}
+                  breakdownCollapsed={false}
+                  hideHeader
+                  className="min-h-[360px]"
                 />
+
+                <div className="matrix-panel border border-matrix-ghost p-3 h-full min-h-[360px]">
+                  <TrendMonitor
+                    rows={trendRows}
+                    from={trendFrom}
+                    to={trendTo}
+                    period="total"
+                    timeZoneLabel={timeZoneLabel}
+                    showTimeZoneLabel={false}
+                    className="h-full"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="flex flex-col gap-8">
-              <IdentityCard
-                title={copy("dashboard.identity.title")}
-                subtitle={copy("dashboard.identity.subtitle")}
-                name={identityHandle}
-                isPublic
-                rankLabel={identityStartDate ?? copy("identity_card.rank_placeholder")}
-                streakDays={activeDays}
-                animateTitle={false}
-                animate={false}
-                scanlines={false}
-                avatarSize={96}
-                className="min-h-[220px]"
-              />
-
-              <div className="matrix-panel border border-matrix-ghost p-3 flex-1">
-                <ActivityHeatmap
-                  heatmap={heatmap}
-                  timeZoneLabel={timeZoneLabel}
-                  timeZoneShortLabel={timeZoneShortLabel}
+              <div className="flex flex-col gap-8">
+                <IdentityCard
+                  title={copy("dashboard.identity.title")}
+                  subtitle={copy("dashboard.identity.subtitle")}
+                  name={identityHandle}
+                  isPublic
+                  rankLabel={
+                    identityStartDate ?? copy("identity_card.rank_placeholder")
+                  }
+                  streakDays={activeDays}
+                  animateTitle={false}
+                  animate={false}
+                  scanlines={false}
+                  avatarSize={96}
+                  className="min-h-[220px]"
                 />
+
+                <div className="matrix-panel border border-matrix-ghost p-3 flex-1">
+                  <ActivityHeatmap
+                    heatmap={heatmap}
+                    timeZoneLabel={timeZoneLabel}
+                    timeZoneShortLabel={timeZoneShortLabel}
+                  />
+                </div>
               </div>
             </div>
           </div>

@@ -9,12 +9,12 @@
 - **WHEN** 用户打开年度总结海报视图
 - **THEN** 页面以静态方式渲染，不出现安装步骤、Details 模块或顶部按钮
 
-### Requirement: Vertical layout with right-side identity/heatmap
-系统 SHALL 使用纵向堆叠布局，并将身份模块与热力图置于右侧分栏。
+### Requirement: Narrow single-column layout
+系统 SHALL 使用收窄的单列纵向布局，以竖向海报形式展示。
 
 #### Scenario: Layout structure
 - **WHEN** 海报视图加载
-- **THEN** 主内容按纵向区块堆叠，右侧分栏包含身份模块与热力图
+- **THEN** 主内容在单列内纵向堆叠，身份模块与热力图位于纵向流中
 
 ### Requirement: Fixed annual range (2025)
 系统 SHALL 在海报视图中固定使用 2025 年范围的数据视角。
