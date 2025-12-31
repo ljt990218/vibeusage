@@ -120,6 +120,61 @@ Response:
 
 ---
 
+### POST /functions/vibescore-link-code-init
+
+Issue a short-lived, single-use link code bound to the current user session.
+
+Auth:
+- `Authorization: Bearer <user_jwt>`
+
+Request body:
+
+```json
+{}
+```
+
+Response:
+
+```json
+{ "link_code": "string", "expires_at": "iso" }
+```
+
+Notes:
+- Link codes expire after ~10 minutes.
+- Each link code can be used once.
+
+---
+
+### POST /functions/vibescore-link-code-exchange
+
+Exchange a link code for a device token (CLI init flow).
+
+Auth:
+- None (public function; server uses service role internally)
+
+Request body:
+
+```json
+{
+  "link_code": "string",
+  "request_id": "string",
+  "device_name": "string?",
+  "platform": "string?"
+}
+```
+
+Response:
+
+```json
+{ "token": "opaque", "device_id": "uuid", "user_id": "uuid" }
+```
+
+Notes:
+- `request_id` is required for replay safety; retries with the same `request_id` return the same token.
+- Expired link codes return `400` and used codes return `409`.
+
+---
+
 ### POST /functions/vibescore-ingest
 
 Ingest half-hour token usage aggregates from a device token idempotently.
@@ -227,6 +282,8 @@ Request body:
 
 ```json
 {
+  "id": "uuid?",
+  "idempotency_key": "string?",
   "user_id": "uuid",
   "source": "paid|override|manual",
   "effective_from": "iso",
@@ -250,6 +307,9 @@ Response:
   "updated_at": "iso"
 }
 ```
+
+Notes:
+- For idempotent retries, send a stable `id` or `idempotency_key` (the backend derives a deterministic id).
 
 ---
 
@@ -323,6 +383,7 @@ Response (bigints as strings):
 Notes:
 - Pricing metadata is resolved from `vibescore_pricing_profiles` using the configured default model/source and the latest `effective_from` not in the future (`active=true`).
 - If no pricing rows exist, the endpoint falls back to the built-in default profile.
+- `pricing_mode` is `add`, `overlap`, or `mixed` (multiple pricing modes across sources).
 - When `debug=1` is set, the response includes a `debug` object with `request_id`, `status`, `query_ms`, `slow_threshold_ms`, `slow_query`.
 
 ---
@@ -345,6 +406,7 @@ Query:
 Notes:
 - `model` is not accepted because this endpoint already returns per-model groups.
 - Pricing metadata is resolved from `vibescore_pricing_profiles`. If the range contains exactly one non-`unknown` model, pricing is resolved for that model; otherwise it falls back to the configured default profile.
+- `pricing_mode` is `add`, `overlap`, or `mixed` (multiple pricing modes across sources).
 - When `debug=1` is set, the response includes a `debug` object with `request_id`, `status`, `query_ms`, `slow_threshold_ms`, `slow_query`.
 
 Response (bigints as strings):
@@ -525,10 +587,27 @@ Query:
 - `debug=1` (optional; include debug payload for query timing)
 
 Response:
-- `weeks` is a list of week columns; each day cell is `{ day, value, level }` or `null` past the end date.
-- `value` is a bigint-as-string.
+
+```json
+{
+  "from": "YYYY-MM-DD",
+  "to": "YYYY-MM-DD",
+  "week_starts_on": "sun",
+  "thresholds": { "t1": "0", "t2": "0", "t3": "0" },
+  "active_days": 0,
+  "streak_days": 0,
+  "weeks": [
+    [
+      { "day": "YYYY-MM-DD", "value": "0", "level": 0 },
+      null
+    ]
+  ]
+}
+```
 
 Notes:
+- `weeks` is a list of week columns; each day cell is `{ day, value, level }` or `null` past the end date.
+- `value` is a bigint-as-string.
 - When `debug=1` is set, the response includes a `debug` object with `request_id`, `status`, `query_ms`, `slow_threshold_ms`, `slow_query`.
 
 ---

@@ -74,6 +74,48 @@ function createServiceDbMock() {
   };
 }
 
+function createEntitlementsDbMock() {
+  const inserts = [];
+  const rows = new Map();
+
+  function from(table) {
+    if (table === 'vibescore_user_entitlements') {
+      return {
+        insert: async (newRows) => {
+          inserts.push({ table, rows: newRows });
+          for (const row of newRows) {
+            if (row && typeof row.id === 'string') rows.set(row.id, row);
+          }
+          return { error: null };
+        },
+        select: () => ({
+          eq: (col, value) => ({
+            maybeSingle: async () => {
+              if (col !== 'id') return { data: null, error: null };
+              return { data: rows.get(value) || null, error: null };
+            }
+          })
+        })
+      };
+    }
+
+    return {
+      insert: async () => ({ error: null }),
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => ({ data: null, error: null })
+        })
+      })
+    };
+  }
+
+  return {
+    db: { from },
+    inserts,
+    rows
+  };
+}
+
 function createLinkCodeExchangeDbMock(linkCodeRow) {
   const inserts = [];
   const updates = [];
@@ -2161,6 +2203,50 @@ test('vibescore-entitlements inserts entitlement (admin)', async () => {
   assert.equal(db.inserts.length, 1);
   assert.equal(db.inserts[0].table, 'vibescore_user_entitlements');
   assert.equal(db.inserts[0].rows[0].user_id, userId);
+});
+
+test('vibescore-entitlements replays idempotency_key without duplicate insert', async () => {
+  const fn = require('../insforge-functions/vibescore-entitlements');
+
+  const db = createEntitlementsDbMock();
+  const userId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+
+  globalThis.createClient = (args) => {
+    if (args && args.edgeFunctionToken === SERVICE_ROLE_KEY) {
+      return { database: db.db };
+    }
+    throw new Error(`Unexpected createClient args: ${JSON.stringify(args)}`);
+  };
+
+  const body = {
+    user_id: userId,
+    source: 'manual',
+    effective_from: '2025-01-01T00:00:00Z',
+    effective_to: '2124-01-01T00:00:00Z',
+    note: 'test',
+    idempotency_key: 'entitlement-1'
+  };
+
+  const req1 = new Request('http://localhost/functions/vibescore-entitlements', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+    body: JSON.stringify(body)
+  });
+  const res1 = await fn(req1);
+  assert.equal(res1.status, 200);
+  const row1 = await res1.json();
+
+  const req2 = new Request('http://localhost/functions/vibescore-entitlements', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+    body: JSON.stringify(body)
+  });
+  const res2 = await fn(req2);
+  assert.equal(res2.status, 200);
+  const row2 = await res2.json();
+
+  assert.equal(row1.id, row2.id);
+  assert.equal(db.inserts.length, 1);
 });
 
 test('vibescore-entitlements accepts project_admin token', async () => {

@@ -20,8 +20,12 @@ All endpoints require a user JWT:
 Authorization: Bearer <user_jwt>
 ```
 
-If the token is missing or invalid, responses return:
+If the token is missing or invalid, responses return 401 with:
 
+```json
+{ "error": "Missing bearer token" }
+```
+or:
 ```json
 { "error": "Unauthorized" }
 ```
@@ -257,6 +261,12 @@ Response:
 
 ```json
 {
+  "from": "YYYY-MM-DD",
+  "to": "YYYY-MM-DD",
+  "week_starts_on": "sun",
+  "thresholds": { "t1": "0", "t2": "0", "t3": "0" },
+  "active_days": 0,
+  "streak_days": 0,
   "weeks": [
     [
       { "day": "YYYY-MM-DD", "value": "0", "level": 0 },
@@ -326,7 +336,7 @@ export interface UsageSummaryResponse {
   totals: UsageTotals & { total_cost_usd: string };
   pricing: {
     model: string;
-    pricing_mode: 'add' | 'overlap';
+    pricing_mode: 'add' | 'overlap' | 'mixed';
     source: string;
     effective_from: string;
     rates_per_million_usd: {
@@ -399,6 +409,16 @@ export interface HeatmapCell {
 }
 
 export interface UsageHeatmapResponse {
+  from: string;
+  to: string;
+  week_starts_on: 'sun' | 'mon';
+  thresholds: {
+    t1: string;
+    t2: string;
+    t3: string;
+  };
+  active_days: number;
+  streak_days: number;
   weeks: Array<Array<HeatmapCell | null>>;
 }
 
