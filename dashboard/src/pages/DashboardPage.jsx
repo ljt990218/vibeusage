@@ -575,6 +575,7 @@ export function DashboardPage({
         timeZoneLabel={timeZoneLabel}
         timeZoneShortLabel={timeZoneShortLabel}
         hideLegend={screenshotMode}
+        defaultToLatestMonth={screenshotMode}
       />
       {!screenshotMode ? (
         <div className="mt-3 text-[8px] opacity-30 uppercase tracking-widest font-black">

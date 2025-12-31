@@ -86,6 +86,13 @@
 - **WHEN** 截图模式启用
 - **THEN** 热力图不显示 less/more 图例行
 
+### Requirement: Default heatmap to latest month in screenshot mode
+系统 SHALL 在截图模式下默认滚动活动热力图到最新月份起始周。
+
+#### Scenario: Latest month visible by default
+- **WHEN** 截图模式启用
+- **THEN** 热力图默认显示最新月份
+
 ### Requirement: Hide header in screenshot mode
 系统 SHALL 在截图模式下隐藏顶部栏，仅保留截图内容区。
 

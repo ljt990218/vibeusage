@@ -120,6 +120,7 @@ export function ActivityHeatmap({
   timeZoneLabel,
   timeZoneShortLabel,
   hideLegend = false,
+  defaultToLatestMonth = false,
 }) {
   const weekStartsOn = heatmap?.week_starts_on === "mon" ? "mon" : "sun";
   const normalizedHeatmap = useMemo(() => {
@@ -173,6 +174,10 @@ export function ActivityHeatmap({
       }),
     [normalizedHeatmap?.to, weekStartsOn, weeks.length]
   );
+  const latestMonthIndex = useMemo(() => {
+    if (!monthMarkers.length) return null;
+    return monthMarkers[monthMarkers.length - 1]?.index ?? null;
+  }, [monthMarkers]);
 
   const scrollRef = useRef(null);
   const trackRef = useRef(null);
@@ -241,14 +246,27 @@ export function ActivityHeatmap({
     }
 
     const snapToLatest = () => {
-      el.scrollLeft = el.scrollWidth - el.clientWidth;
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      let targetScroll = maxScroll;
+      if (
+        defaultToLatestMonth &&
+        typeof latestMonthIndex === "number" &&
+        Number.isFinite(latestMonthIndex)
+      ) {
+        const columnWidth = CELL_SIZE + CELL_GAP;
+        targetScroll = Math.min(
+          maxScroll,
+          Math.max(0, latestMonthIndex * columnWidth)
+        );
+      }
+      el.scrollLeft = targetScroll;
       updateScrollState();
       hasAutoScrolledRef.current = true;
     };
 
     // Wait two frames to ensure layout settles before snapping.
     requestAnimationFrame(() => requestAnimationFrame(snapToLatest));
-  }, [updateScrollState, weeks.length]);
+  }, [defaultToLatestMonth, latestMonthIndex, updateScrollState, weeks.length]);
 
   // --- CONTENT DRAG HANDLERS ---
   const handleContentPointerMoveGlobal = useCallback((e) => {
