@@ -17,8 +17,11 @@
 
 ## Results
 - `npm test` passed (131 tests).
-- Oversized range acceptance failed on production: all three endpoints returned `200` with full payload instead of `400`.
-- `slow_query` logs not observed in `function.logs` after the oversized-range requests.
+- Oversized range acceptance passed on production after deployment:
+  - `vibescore-usage-summary` → `400`
+  - `vibescore-usage-daily` → `400`
+  - `vibescore-usage-model-breakdown` → `400`
+- `slow_query` logs not observed in `function.logs` after running valid 365-day requests; observed durations (~1.0–1.2s) were below the default 2000ms threshold.
 
 ## Evidence
 - Terminal output captured in CLI session (2025-12-30).
@@ -26,5 +29,4 @@
 
 ## Remaining Risks
 - Guardrail thresholds may be incorrect until validated in staging.
-- Production does not enforce day-range guardrails yet; likely not deployed.
-- Slow-query logs not observed in production logs (likely due to missing deployment).
+- Slow-query logs not observed under current threshold; require lower `VIBESCORE_SLOW_QUERY_MS` or slower query to validate emission.
