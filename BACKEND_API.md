@@ -288,6 +288,7 @@ Query:
 - `model=<model-id>` (optional; filter by model; omit to aggregate all models)
 - `tz=IANA` (optional; e.g. `America/Los_Angeles`)
 - `tz_offset_minutes` (optional; fixed offset minutes from UTC to local, e.g. `-480`)
+- `debug=1` (optional; include debug payload for query timing)
 
 Response (bigints as strings):
 
@@ -322,6 +323,7 @@ Response (bigints as strings):
 Notes:
 - Pricing metadata is resolved from `vibescore_pricing_profiles` using the configured default model/source and the latest `effective_from` not in the future (`active=true`).
 - If no pricing rows exist, the endpoint falls back to the built-in default profile.
+- When `debug=1` is set, the response includes a `debug` object with `request_id`, `status`, `query_ms`, `slow_threshold_ms`, `slow_query`.
 
 ---
 
@@ -338,10 +340,12 @@ Query:
 - `source=codex|every-code|...` (optional; filter by source; omit to aggregate all sources)
 - `tz=IANA` (optional; e.g. `America/Los_Angeles`)
 - `tz_offset_minutes` (optional; fixed offset minutes from UTC to local, e.g. `-480`)
+- `debug=1` (optional; include debug payload for query timing)
 
 Notes:
 - `model` is not accepted because this endpoint already returns per-model groups.
 - Pricing metadata is resolved from `vibescore_pricing_profiles`. If the range contains exactly one non-`unknown` model, pricing is resolved for that model; otherwise it falls back to the configured default profile.
+- When `debug=1` is set, the response includes a `debug` object with `request_id`, `status`, `query_ms`, `slow_threshold_ms`, `slow_query`.
 
 Response (bigints as strings):
 
@@ -414,6 +418,9 @@ Response:
 { "from": "YYYY-MM-DD", "to": "YYYY-MM-DD", "data": [ { "day": "YYYY-MM-DD", "total_tokens": 0 } ] }
 ```
 
+Notes:
+- When `debug=1` is set, the response includes a `debug` object with `request_id`, `status`, `query_ms`, `slow_threshold_ms`, `slow_query`.
+
 ---
 
 ### GET /functions/vibescore-usage-hourly
@@ -429,6 +436,7 @@ Query:
 - `model=<model-id>` (optional; filter by model; omit to aggregate all models)
 - `tz=IANA` (optional; e.g. `America/Los_Angeles`)
 - `tz_offset_minutes` (optional; fixed offset minutes from UTC to local, e.g. `-480`)
+- `debug=1` (optional; include debug payload for query timing)
 
 Response:
 
@@ -453,6 +461,9 @@ Response:
 }
 ```
 
+Notes:
+- When `debug=1` is set, the response includes a `debug` object with `request_id`, `status`, `query_ms`, `slow_threshold_ms`, `slow_query`.
+
 ---
 
 ### GET /functions/vibescore-usage-monthly
@@ -469,6 +480,7 @@ Query:
 - `model=<model-id>` (optional; filter by model; omit to aggregate all models)
 - `tz=IANA` (optional; e.g. `America/Los_Angeles`)
 - `tz_offset_minutes` (optional; fixed offset minutes from UTC to local, e.g. `-480`)
+- `debug=1` (optional; include debug payload for query timing)
 
 Response:
 
@@ -490,6 +502,9 @@ Response:
 }
 ```
 
+Notes:
+- When `debug=1` is set, the response includes a `debug` object with `request_id`, `status`, `query_ms`, `slow_threshold_ms`, `slow_query`.
+
 ---
 
 ### GET /functions/vibescore-usage-heatmap
@@ -507,10 +522,14 @@ Query:
 - `model=<model-id>` (optional; filter by model; omit to aggregate all models)
 - `tz=IANA` (optional; e.g. `America/Los_Angeles`)
 - `tz_offset_minutes` (optional; fixed offset minutes from UTC to local, e.g. `-480`)
+- `debug=1` (optional; include debug payload for query timing)
 
 Response:
 - `weeks` is a list of week columns; each day cell is `{ day, value, level }` or `null` past the end date.
 - `value` is a bigint-as-string.
+
+Notes:
+- When `debug=1` is set, the response includes a `debug` object with `request_id`, `status`, `query_ms`, `slow_threshold_ms`, `slow_query`.
 
 ---
 

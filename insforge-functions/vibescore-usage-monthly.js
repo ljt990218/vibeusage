@@ -31,7 +31,7 @@ var require_http = __commonJS({
         }
       });
     }
-    function requireMethod2(request, method) {
+    function requireMethod(request, method) {
       if (request.method !== method) return json2({ error: "Method not allowed" }, 405);
       return null;
     }
@@ -50,7 +50,7 @@ var require_http = __commonJS({
       corsHeaders,
       handleOptions: handleOptions2,
       json: json2,
-      requireMethod: requireMethod2,
+      requireMethod,
       readJson
     };
   }
@@ -708,7 +708,8 @@ var require_logging = __commonJS({
     }
     module2.exports = {
       withRequestLogging: withRequestLogging2,
-      logSlowQuery: logSlowQuery2
+      logSlowQuery: logSlowQuery2,
+      getSlowQueryThresholdMs
     };
     function logSlowQuery2(logger, fields) {
       if (!logger || typeof logger.log !== "function") return;
@@ -755,8 +756,61 @@ var require_logging = __commonJS({
   }
 });
 
+// insforge-src/shared/debug.js
+var require_debug = __commonJS({
+  "insforge-src/shared/debug.js"(exports2, module2) {
+    "use strict";
+    var { getSlowQueryThresholdMs } = require_logging();
+    function isDebugEnabled2(url) {
+      if (!url) return false;
+      if (typeof url === "string") {
+        try {
+          const parsed = new URL(url);
+          return parsed.searchParams.get("debug") === "1";
+        } catch (_e) {
+          return false;
+        }
+      }
+      return url?.searchParams?.get("debug") === "1";
+    }
+    function buildSlowQueryDebugPayload({ logger, durationMs, status } = {}) {
+      const safeDuration = Number.isFinite(durationMs) ? Math.max(0, Math.round(durationMs)) : 0;
+      const thresholdMs = getSlowQueryThresholdMs();
+      if (logger?.log) {
+        logger.log({
+          stage: "debug_payload",
+          status: typeof status === "number" ? status : null,
+          query_ms: safeDuration,
+          slow_threshold_ms: thresholdMs,
+          slow_query: safeDuration >= thresholdMs ? 1 : 0
+        });
+      }
+      return {
+        request_id: logger?.requestId || "",
+        status: typeof status === "number" ? status : null,
+        query_ms: safeDuration,
+        slow_threshold_ms: thresholdMs,
+        slow_query: safeDuration >= thresholdMs
+      };
+    }
+    function withSlowQueryDebugPayload2(body, options) {
+      if (!body || typeof body !== "object") return body;
+      if (body.debug) return body;
+      return {
+        ...body,
+        debug: buildSlowQueryDebugPayload(options)
+      };
+    }
+    module2.exports = {
+      isDebugEnabled: isDebugEnabled2,
+      buildSlowQueryDebugPayload,
+      withSlowQueryDebugPayload: withSlowQueryDebugPayload2
+    };
+  }
+});
+
 // insforge-src/functions/vibescore-usage-monthly.js
-var { handleOptions, json, requireMethod } = require_http();
+var { handleOptions, json } = require_http();
 var { getBearerToken, getEdgeClientAndUserIdFast } = require_auth();
 var { getBaseUrl } = require_env();
 var { getSourceParam } = require_source();
@@ -774,40 +828,45 @@ var {
 var { toBigInt, toPositiveIntOrNull } = require_numbers();
 var { forEachPage } = require_pagination();
 var { logSlowQuery, withRequestLogging } = require_logging();
+var { isDebugEnabled, withSlowQueryDebugPayload } = require_debug();
 var MAX_MONTHS = 24;
 module.exports = withRequestLogging("vibescore-usage-monthly", async function(request, logger) {
   const opt = handleOptions(request);
   if (opt) return opt;
-  const methodErr = requireMethod(request, "GET");
-  if (methodErr) return methodErr;
+  const url = new URL(request.url);
+  const debugEnabled = isDebugEnabled(url);
+  const respond = (body, status, durationMs) => json(
+    debugEnabled ? withSlowQueryDebugPayload(body, { logger, durationMs, status }) : body,
+    status
+  );
+  if (request.method !== "GET") return respond({ error: "Method not allowed" }, 405, 0);
   const bearer = getBearerToken(request.headers.get("Authorization"));
-  if (!bearer) return json({ error: "Missing bearer token" }, 401);
+  if (!bearer) return respond({ error: "Missing bearer token" }, 401, 0);
   const baseUrl = getBaseUrl();
   const auth = await getEdgeClientAndUserIdFast({ baseUrl, bearer });
-  if (!auth.ok) return json({ error: "Unauthorized" }, 401);
-  const url = new URL(request.url);
+  if (!auth.ok) return respond({ error: "Unauthorized" }, 401, 0);
   const tzContext = getUsageTimeZoneContext(url);
   const sourceResult = getSourceParam(url);
-  if (!sourceResult.ok) return json({ error: sourceResult.error }, 400);
+  if (!sourceResult.ok) return respond({ error: sourceResult.error }, 400, 0);
   const source = sourceResult.source;
   const modelResult = getModelParam(url);
-  if (!modelResult.ok) return json({ error: modelResult.error }, 400);
+  if (!modelResult.ok) return respond({ error: modelResult.error }, 400, 0);
   const model = modelResult.model;
   const monthsRaw = url.searchParams.get("months");
   const monthsParsed = toPositiveIntOrNull(monthsRaw);
   const months = monthsParsed == null ? MAX_MONTHS : monthsParsed;
-  if (months < 1 || months > MAX_MONTHS) return json({ error: "Invalid months" }, 400);
+  if (months < 1 || months > MAX_MONTHS) return respond({ error: "Invalid months" }, 400, 0);
   const toRaw = url.searchParams.get("to");
   const todayParts = getLocalParts(/* @__PURE__ */ new Date(), tzContext);
   const toParts = toRaw ? parseDateParts(toRaw) : { year: todayParts.year, month: todayParts.month, day: todayParts.day };
-  if (!toParts) return json({ error: "Invalid to date" }, 400);
+  if (!toParts) return respond({ error: "Invalid to date" }, 400, 0);
   const startMonthParts = addDatePartsMonths(
     { year: toParts.year, month: toParts.month, day: 1 },
     -(months - 1)
   );
   const from = formatDateParts(startMonthParts);
   const to = formatDateParts(toParts);
-  if (!from || !to) return json({ error: "Invalid to date" }, 400);
+  if (!from || !to) return respond({ error: "Invalid to date" }, 400, 0);
   const startUtc = localDatePartsToUtc(
     { ...startMonthParts, hour: 0, minute: 0, second: 0 },
     tzContext
@@ -870,7 +929,7 @@ module.exports = withRequestLogging("vibescore-usage-monthly", async function(re
     tz: tzContext?.timeZone || null,
     tz_offset_minutes: Number.isFinite(tzContext?.offsetMinutes) ? tzContext.offsetMinutes : null
   });
-  if (error) return json({ error: error.message }, 500);
+  if (error) return respond({ error: error.message }, 500, queryDurationMs);
   const monthly = monthKeys.map((key) => {
     const bucket = buckets.get(key);
     return {
@@ -882,5 +941,5 @@ module.exports = withRequestLogging("vibescore-usage-monthly", async function(re
       reasoning_output_tokens: bucket.reasoning.toString()
     };
   });
-  return json({ from, to, months, data: monthly }, 200);
+  return respond({ from, to, months, data: monthly }, 200, queryDurationMs);
 });
