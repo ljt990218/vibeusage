@@ -508,16 +508,17 @@ async function previewIntegrations({ context }) {
   }
 
   const opencodeDirExists = await isDir(context.opencodeConfigDir);
-  if (opencodeDirExists) {
-    const installed = await isOpencodePluginInstalled({ configDir: context.opencodeConfigDir });
-    summary.push({
-      label: 'Opencode Plugin',
-      status: 'installed',
-      detail: installed ? 'Plugin already installed' : 'Will install plugin'
-    });
-  } else {
-    summary.push({ label: 'Opencode Plugin', status: 'skipped', detail: 'Config not found' });
-  }
+  const installed = await isOpencodePluginInstalled({ configDir: context.opencodeConfigDir });
+  const opencodeDetail = installed
+    ? 'Plugin already installed'
+    : opencodeDirExists
+      ? 'Will install plugin'
+      : 'Will create config and install plugin';
+  summary.push({
+    label: 'Opencode Plugin',
+    status: 'installed',
+    detail: opencodeDetail
+  });
 
   const codeProbe = await probeFile(context.codeConfigPath);
   if (codeProbe.exists) {

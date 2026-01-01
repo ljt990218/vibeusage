@@ -7,6 +7,8 @@ Date: 2026-01-01
 - Result: pass (13 tests)
 - Re-run (menu navigation update): same command, pass (13 tests)
 - Re-run (privacy copy update): same command, pass (13 tests)
+- Re-run (dry-run opencode preview): `node --test test/init-uninstall.test.js test/init-spawn-error.test.js test/init-dry-run.test.js`
+- Result: pass (14 tests)
 
 ## Acceptance Scripts
 - Command: `node scripts/acceptance/gemini-hook-install.cjs`

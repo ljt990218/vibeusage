@@ -11,7 +11,7 @@
 ## 2. Tests
 - [x] Update `test/init-uninstall.test.js` to run init with `--yes` (no prompts).
 - [x] Update acceptance scripts to pass `--yes` and avoid TTY hangs.
-- [ ] Add regression check for dry-run no-write behavior (if kept).
+- [x] Add regression check for dry-run no-write behavior (if kept).
 
 ## 3. Verification
 - [x] Run `node --test test/init-uninstall.test.js test/init-spawn-error.test.js`.
