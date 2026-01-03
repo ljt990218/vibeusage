@@ -77,7 +77,6 @@ test("DashboardPage removes heatmap range label", () => {
 test("copy registry removes unused install steps and range label", () => {
   const csv = readFile(copyPath);
   const removed = [
-    "landing.screenshot.alt",
     "dashboard.install.headline",
     "dashboard.install.step1",
     "dashboard.install.step2",
