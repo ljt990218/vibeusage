@@ -100,6 +100,28 @@ test("DashboardPage lets TrendMonitor auto-size", () => {
   );
 });
 
+test("TrendMonitor root does not force full height", () => {
+  const src = readFile(
+    path.join(
+      __dirname,
+      "..",
+      "dashboard",
+      "src",
+      "ui",
+      "matrix-a",
+      "components",
+      "TrendMonitor.jsx"
+    )
+  );
+  const lines = src.split("\n");
+  const rootLine = lines.find((line) => line.includes("className={`w-full"));
+  assert.ok(rootLine, "expected TrendMonitor root className line");
+  assert.ok(
+    !rootLine.includes("h-full"),
+    "expected TrendMonitor root to avoid h-full"
+  );
+});
+
 test("DashboardPage supports force_install preview", () => {
   const src = readFile(pagePath);
   assert.ok(

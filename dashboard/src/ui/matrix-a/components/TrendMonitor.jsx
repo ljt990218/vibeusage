@@ -368,7 +368,7 @@ export function TrendMonitor({
 
   return (
     <div
-      className={`w-full h-full min-h-[160px] flex flex-col relative group select-none matrix-panel p-2 ${className}`}
+      className={`w-full min-h-[160px] flex flex-col relative group select-none matrix-panel p-2 ${className}`}
     >
       <div className="flex items-center leading-none px-1 mb-2">
         <span className="shrink-0 text-matrix-dim">{ASCII_CHARS.TOP_LEFT}</span>
