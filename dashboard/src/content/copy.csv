@@ -78,7 +78,7 @@ status.link.stable,ui,ConnectionStatus,ConnectionStatus,label,"LINK: STABLE",,ac
 status.link.unstable,ui,ConnectionStatus,ConnectionStatus,label,"LINK: WEAK",,active
 status.link.lost,ui,ConnectionStatus,ConnectionStatus,label,"LINK: LOST",,active
 
-boot.ascii_art,ui,BootScreen,BootScreen,ascii,"██╗   ██╗██╗██████╗ ███████╗███████╗ ██████╗  ██████╗ ██████╗ ███████╗\\n██║   ██║██║██╔══██╗██╔════╝██╔════╝██╔════╝ ██╔═══██╗██╔══██╗██╔════╝\\n██║   ██║██║██████╔╝█████╗  ███████╗██║      ██║   ██║██████╔╝█████╗\\n╚██╗ ██╔╝██║██╔══██╗██╔══╝  ╚════██║██║      ██║   ██║██╔══██╗██╔══╝\\n ╚████╔╝ ██║██████╔╝███████╗███████║╚██████╗ ╚██████╔╝██║  ██║███████╗\\n  ╚═══╝  ╚═╝╚═════╝ ╚══════╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝",,active
+boot.ascii_art,ui,BootScreen,BootScreen,ascii,"██╗   ██╗██╗██████╗ ███████╗██╗   ██╗███████╗ █████╗  ██████╗ ███████╗\n██║   ██║██║██╔══██╗██╔════╝██║   ██║██╔════╝██╔══██╗██╔════╝ ██╔════╝\n██║   ██║██║██████╔╝█████╗  ██║   ██║███████╗███████║██║  ███╗█████╗\n╚██╗ ██╔╝██║██╔══██╗██╔══╝  ██║   ██║╚════██║██╔══██║██║   ██║██╔══╝\n ╚████╔╝ ██║██████╔╝███████╗╚██████╔╝███████║██║  ██║╚██████╔╝███████╗\n  ╚═══╝  ╚═╝╚═════╝ ╚══════╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝",,active
 boot.prompt,ui,BootScreen,BootScreen,prompt,"INITIALIZING DASHBOARD...",,active
 boot.skip_hint,ui,BootScreen,BootScreen,skip_hint,"Click to skip",,active
 boot.skip_aria,ui,BootScreen,BootScreen,aria_label,"Skip boot screen",,active
