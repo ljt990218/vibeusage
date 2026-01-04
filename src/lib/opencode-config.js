@@ -88,7 +88,9 @@ function hasPluginMarker(text) {
 }
 
 module.exports = {
+  DEFAULT_EVENT,
   DEFAULT_PLUGIN_NAME,
+  PLUGIN_MARKER,
   resolveOpencodeConfigDir,
   resolveOpencodePluginDir,
   buildOpencodePlugin,

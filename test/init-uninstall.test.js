@@ -8,7 +8,12 @@ const { cmdInit } = require('../src/commands/init');
 const { cmdUninstall } = require('../src/commands/uninstall');
 const { buildClaudeHookCommand } = require('../src/lib/claude-config');
 const { buildGeminiHookCommand } = require('../src/lib/gemini-config');
-const { buildOpencodePlugin } = require('../src/lib/opencode-config');
+const {
+  buildOpencodePlugin,
+  DEFAULT_EVENT,
+  DEFAULT_PLUGIN_NAME,
+  PLUGIN_MARKER
+} = require('../src/lib/opencode-config');
 
 async function waitForFile(filePath, { timeoutMs = 1500, intervalMs = 50 } = {}) {
   const start = Date.now();
@@ -83,6 +88,13 @@ test('init then uninstall restores original Codex notify (when pre-existing noti
 test('opencode plugin uses session.updated event', () => {
   const plugin = buildOpencodePlugin({ notifyPath: '/tmp/notify.cjs' });
   assert.match(plugin, /session\.updated/);
+});
+
+test('opencode config exports plugin constants', () => {
+  assert.equal(typeof PLUGIN_MARKER, 'string');
+  assert.ok(PLUGIN_MARKER.length > 0);
+  assert.equal(DEFAULT_EVENT, 'session.updated');
+  assert.equal(DEFAULT_PLUGIN_NAME, 'vibeusage-tracker.js');
 });
 
 test('init then uninstall removes notify when none existed', async () => {
