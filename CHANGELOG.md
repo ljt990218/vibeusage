@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.9] - 2026-01-04
+### Changed
+- Opencode plugin now triggers on session.updated for auto sync.
+- Opencode parser falls back to model/modelId when modelID is missing.
+
+### Fixed
+- Opencode plugin acceptance checks now align with shared plugin constants.
+
 ## [0.2.6] - 2026-01-01
 ### Changed
 - Refresh CLI init install flow copy (local report → auth transition → success).
