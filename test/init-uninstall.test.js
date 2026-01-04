@@ -8,6 +8,7 @@ const { cmdInit } = require('../src/commands/init');
 const { cmdUninstall } = require('../src/commands/uninstall');
 const { buildClaudeHookCommand } = require('../src/lib/claude-config');
 const { buildGeminiHookCommand } = require('../src/lib/gemini-config');
+const { buildOpencodePlugin } = require('../src/lib/opencode-config');
 
 async function waitForFile(filePath, { timeoutMs = 1500, intervalMs = 50 } = {}) {
   const start = Date.now();
@@ -77,6 +78,11 @@ test('init then uninstall restores original Codex notify (when pre-existing noti
     else process.env.OPENCODE_CONFIG_DIR = prevOpencodeConfigDir;
     await fs.rm(tmp, { recursive: true, force: true });
   }
+});
+
+test('opencode plugin uses session.updated event', () => {
+  const plugin = buildOpencodePlugin({ notifyPath: '/tmp/notify.cjs' });
+  assert.match(plugin, /session\.updated/);
 });
 
 test('init then uninstall removes notify when none existed', async () => {
