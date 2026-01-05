@@ -91,8 +91,8 @@ npx --yes vibeusage status
 
 - `VIBESCORE_HTTP_TIMEOUT_MS`：CLI 请求超时（毫秒，默认 `20000`，`0` 表示关闭，范围 `1000..120000`）。
 - `VITE_VIBESCORE_HTTP_TIMEOUT_MS`：Dashboard 请求超时（毫秒，默认 `15000`，`0` 表示关闭，范围 `1000..30000`）。
-- `VIBEUSAGE_ROLLUP_ENABLED`：开启后端 usage rollup 聚合（支持 `1|true|yes|on`），默认关闭。
-- `VIBESCORE_ROLLUP_ENABLED`：`VIBEUSAGE_ROLLUP_ENABLED` 的兼容别名。
+- `VIBEUSAGE_ROLLUP_ENABLED`：当前被忽略，rollup 聚合在代码层禁用，等待 rollup 表部署完成后再恢复。
+- `VIBESCORE_ROLLUP_ENABLED`：`VIBEUSAGE_ROLLUP_ENABLED` 的兼容别名（同样无效）。
 - `GEMINI_HOME`：覆盖 Gemini CLI 的 home（默认 `~/.gemini`）。
 
 ## 🧰 常见问题
@@ -170,6 +170,16 @@ npm run validate:copy
 
 # 执行烟雾测试
 npm run smoke
+```
+
+### 架构画布聚焦
+
+```bash
+# 生成指定顶层模块的聚焦画布
+node scripts/ops/architecture-canvas.cjs --focus src
+
+# 别名：--module
+node scripts/ops/architecture-canvas.cjs --module dashboard
 ```
 
 ## 📜 开源协议

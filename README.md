@@ -91,8 +91,8 @@ npx --yes vibeusage status
 
 - `VIBESCORE_HTTP_TIMEOUT_MS`: CLI HTTP timeout in ms (default `20000`, `0` disables, clamped to `1000..120000`).
 - `VITE_VIBESCORE_HTTP_TIMEOUT_MS`: Dashboard request timeout in ms (default `15000`, `0` disables, clamped to `1000..30000`).
-- `VIBEUSAGE_ROLLUP_ENABLED`: Enable usage rollup aggregation in backend usage endpoints (`1|true|yes|on`), default disabled.
-- `VIBESCORE_ROLLUP_ENABLED`: Legacy alias for `VIBEUSAGE_ROLLUP_ENABLED`.
+- `VIBEUSAGE_ROLLUP_ENABLED`: Currently ignored; rollup aggregation is disabled in code until the daily rollup table is deployed.
+- `VIBESCORE_ROLLUP_ENABLED`: Legacy alias for `VIBEUSAGE_ROLLUP_ENABLED` (ignored).
 - `GEMINI_HOME`: Override Gemini CLI home (defaults to `~/.gemini`).
 
 ## 🧰 Troubleshooting
@@ -170,6 +170,16 @@ npm run validate:copy
 
 # Run smoke tests
 npm run smoke
+```
+
+### Architecture Canvas Focus
+
+```bash
+# Generate a focused canvas for a top-level module
+node scripts/ops/architecture-canvas.cjs --focus src
+
+# Alias: --module
+node scripts/ops/architecture-canvas.cjs --module dashboard
 ```
 
 ## 📜 License

@@ -83,7 +83,7 @@
     {
       "id": "test_architecture-canvas_test_5f2ee083",
       "type": "text",
-      "text": "**architecture-canvas.test**\n`test/architecture-canvas.test.js`\n\nTest module.\n\n包含：\n- UserController (64 行)\n- helper (0 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
+      "text": "**architecture-canvas.test**\n`test/architecture-canvas.test.js`\n\nTest module.\n\n包含：\n- UserController (84 行)\n- helper (0 个参数)\n\n依赖：1 个模块\n被依赖：0 次",
       "x": 100,
       "y": 9772,
       "width": 280,
@@ -440,7 +440,7 @@
     {
       "id": "test_edge-functions_test_deffefcc",
       "type": "text",
-      "text": "**edge-functions.test**\n`test/edge-functions.test.js`\n\nTest module.\n\n包含：\n- edge-functions.test (3025 行)\n- toBase64Url (1 个参数)\n\n依赖：2 个模块\n被依赖：0 次",
+      "text": "**edge-functions.test**\n`test/edge-functions.test.js`\n\nTest module.\n\n包含：\n- edge-functions.test (3026 行)\n- toBase64Url (1 个参数)\n\n依赖：2 个模块\n被依赖：0 次",
       "x": 100,
       "y": 10852,
       "width": 280,
@@ -644,7 +644,7 @@
     {
       "id": "test_link-code-exchange-payload_test_900230c6",
       "type": "text",
-      "text": "**link-code-exchange-payload.test**\n`test/link-code-exchange-payload.test.js`\n\nTest module.\n\n包含：\n- link-code-exchange-payload.test (20 行)\n- exports (0 个参数)\n\n依赖：1 个模块\n被依赖：0 次",
+      "text": "**link-code-exchange-payload.test**\n`test/link-code-exchange-payload.test.js`\n\nTest module.\n\n包含：\n- link-code-exchange-payload.test (20 行)\n- exports (0 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
       "x": 1900,
       "y": 11212,
       "width": 280,
@@ -761,10 +761,27 @@
       }
     },
     {
+      "id": "test_rollup-recovery-doc_test_36ed20",
+      "type": "text",
+      "text": "**rollup-recovery-doc.test**\n`test/rollup-recovery-doc.test.js`\n\nTest module.\n\n包含：\n- rollup-recovery-doc.test (39 行)\n- exports (0 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
+      "x": 1900,
+      "y": 11572,
+      "width": 280,
+      "height": 232,
+      "color": "2",
+      "meta": {
+        "relPath": "test/rollup-recovery-doc.test.js",
+        "category": "test",
+        "group": "test",
+        "side": "right",
+        "layerIndex": 6
+      }
+    },
+    {
       "id": "test_safe-browser_test_3daea783",
       "type": "text",
       "text": "**safe-browser.test**\n`test/safe-browser.test.js`\n\nTest module.\n\n包含：\n- safe-browser.test (66 行)\n- exports (0 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
-      "x": 1900,
+      "x": 2260,
       "y": 11572,
       "width": 280,
       "height": 232,
@@ -781,8 +798,8 @@
       "id": "test_status_test_16fa5027",
       "type": "text",
       "text": "**status.test**\n`test/status.test.js`\n\nTest module.\n\n包含：\n- status.test (125 行)\n- exports (0 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
-      "x": 2260,
-      "y": 11572,
+      "x": 100,
+      "y": 11932,
       "width": 280,
       "height": 232,
       "color": "2",
@@ -798,7 +815,7 @@
       "id": "test_upload-throttle_test_46c0db95",
       "type": "text",
       "text": "**upload-throttle.test**\n`test/upload-throttle.test.js`\n\nTest module.\n\n包含：\n- upload-throttle.test (103 行)\n- exports (0 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
-      "x": 100,
+      "x": 460,
       "y": 11932,
       "width": 280,
       "height": 232,
@@ -815,7 +832,7 @@
       "id": "test_uploader_test_2bc50c67",
       "type": "text",
       "text": "**uploader.test**\n`test/uploader.test.js`\n\nTest module.\n\n包含：\n- uploader.test (125 行)\n- stubIngestHourly (0 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
-      "x": 460,
+      "x": 820,
       "y": 11932,
       "width": 280,
       "height": 232,
@@ -832,7 +849,7 @@
       "id": "test_usage-aggregate_test_516e285a",
       "type": "text",
       "text": "**usage-aggregate.test**\n`test/usage-aggregate.test.js`\n\nTest module.\n\n包含：\n- usage-aggregate.test (41 行)\n- exports (0 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
-      "x": 820,
+      "x": 1180,
       "y": 11932,
       "width": 280,
       "height": 232,
@@ -849,7 +866,7 @@
       "id": "test_usage-pagination-order_test_e45c4df4",
       "type": "text",
       "text": "**usage-pagination-order.test**\n`test/usage-pagination-order.test.js`\n\nTest module.\n\n包含：\n- usage-pagination-order.test (74 行)\n- readFile (1 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
-      "x": 1180,
+      "x": 1540,
       "y": 11932,
       "width": 280,
       "height": 232,
@@ -866,7 +883,7 @@
       "id": "test_usage-rollup_test_6eb5afc3",
       "type": "text",
       "text": "**usage-rollup.test**\n`test/usage-rollup.test.js`\n\nTest module.\n\n包含：\n- usage-rollup.test (106 行)\n- buildRows (1 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
-      "x": 1540,
+      "x": 1900,
       "y": 11932,
       "width": 280,
       "height": 232,
@@ -1556,7 +1573,7 @@
     {
       "id": "utils_usage-rollup_63cc83a9",
       "type": "text",
-      "text": "**usage-rollup**\n`insforge-src/shared/usage-rollup.js`\n\nShared utilities.\n\n包含：\n- usage-rollup (92 行)\n- createTotals (0 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
+      "text": "**usage-rollup**\n`insforge-src/shared/usage-rollup.js`\n\nShared utilities.\n\n包含：\n- usage-rollup (88 行)\n- createTotals (0 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
       "x": 2620,
       "y": 6736,
       "width": 280,
@@ -3383,10 +3400,28 @@
       }
     },
     {
+      "id": "external_OpenAI_ac6e26d9",
+      "type": "text",
+      "text": "**OpenAI**\n`external`\n\nThird-party service.\n\n包含：\n- OpenAI (integration)\n- api (0 个参数)\n\n依赖：0 个模块\n被依赖：3 次",
+      "x": 100,
+      "y": 3684,
+      "width": 280,
+      "height": 232,
+      "color": "4",
+      "meta": {
+        "relPath": "external",
+        "category": "external",
+        "group": "external",
+        "side": "right",
+        "layerIndex": 4
+      },
+      "externalService": "OpenAI"
+    },
+    {
       "id": "external_InsForge_f6643588",
       "type": "text",
-      "text": "**InsForge**\n`external`\n\nThird-party service.\n\n包含：\n- InsForge (integration)\n- api (0 个参数)\n\n依赖：0 个模块\n被依赖：7 次",
-      "x": 100,
+      "text": "**InsForge**\n`external`\n\nThird-party service.\n\n包含：\n- InsForge (integration)\n- api (0 个参数)\n\n依赖：0 个模块\n被依赖：6 次",
+      "x": 460,
       "y": 3684,
       "width": 280,
       "height": 232,
@@ -3404,24 +3439,6 @@
       "id": "external_Anthropic_fbd19171",
       "type": "text",
       "text": "**Anthropic**\n`external`\n\nThird-party service.\n\n包含：\n- Anthropic (integration)\n- api (0 个参数)\n\n依赖：0 个模块\n被依赖：3 次",
-      "x": 460,
-      "y": 3684,
-      "width": 280,
-      "height": 232,
-      "color": "4",
-      "meta": {
-        "relPath": "external",
-        "category": "external",
-        "group": "external",
-        "side": "right",
-        "layerIndex": 4
-      },
-      "externalService": "Anthropic"
-    },
-    {
-      "id": "external_OpenAI_ac6e26d9",
-      "type": "text",
-      "text": "**OpenAI**\n`external`\n\nThird-party service.\n\n包含：\n- OpenAI (integration)\n- api (0 个参数)\n\n依赖：0 个模块\n被依赖：2 次",
       "x": 100,
       "y": 4044,
       "width": 280,
@@ -3434,7 +3451,7 @@
         "side": "right",
         "layerIndex": 4
       },
-      "externalService": "OpenAI"
+      "externalService": "Anthropic"
     }
   ],
   "edges": [
@@ -3457,6 +3474,13 @@
       "fromNode": "test_architecture-guardrails_test_b833cfeb",
       "fromSide": "top",
       "toNode": "external_InsForge_f6643588",
+      "toSide": "bottom"
+    },
+    {
+      "id": "edge_test_architecture-canvas_test_5f2ee083_external_OpenAI_ac6e26d9",
+      "fromNode": "test_architecture-canvas_test_5f2ee083",
+      "fromSide": "top",
+      "toNode": "external_OpenAI_ac6e26d9",
       "toSide": "bottom"
     },
     {
@@ -3511,13 +3535,6 @@
     {
       "id": "edge_test_interaction-sequence-canvas_test_33aed5de_external_InsForge_f6643588",
       "fromNode": "test_interaction-sequence-canvas_test_33aed5de",
-      "fromSide": "top",
-      "toNode": "external_InsForge_f6643588",
-      "toSide": "bottom"
-    },
-    {
-      "id": "edge_test_link-code-exchange-payload_test_900230c6_external_InsForge_f6643588",
-      "fromNode": "test_link-code-exchange-payload_test_900230c6",
       "fromSide": "top",
       "toNode": "external_InsForge_f6643588",
       "toSide": "bottom"
