@@ -27,6 +27,11 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - 全流程结束后必须再次更新 Canvas，保证节点格式与现有节点保持同步。
 - 渐进式披露：阅读架构时先运行 `node scripts/ops/architecture-canvas.cjs --list-modules` 获取模块，再用 `--focus <module>` 生成聚焦画布；需要保留全量画布时用 `--out` 输出到新文件。
 
+# OpenSpec 使用范围
+
+- 默认使用 skill 工作流，不强制走 OpenSpec。
+- 仅在以下“重大模块”场景触发 OpenSpec：外部集成、跨模块核心流程、DB schema 变更、安全/权限边界变化、破坏性变更。
+
 # 文案规则（Copy Registry）
 
 - 本项目页面上所有展示文字必须来自 `dashboard/src/content/copy.csv`。
