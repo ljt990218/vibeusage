@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const { pathToFileURL } = require("node:url");
 
 function read(rel) {
   return fs.readFileSync(path.join(__dirname, "..", rel), "utf8");
@@ -55,4 +56,41 @@ test("copy registry includes session expired strings", () => {
   assert.ok(src.includes("dashboard.session_expired.body_tail"));
   assert.ok(src.includes("dashboard.session_expired.copy_label"));
   assert.ok(src.includes("dashboard.session_expired.copied"));
+});
+
+test("auth storage skips localStorage when window is undefined", async () => {
+  const originalLocalStorage = globalThis.localStorage;
+  const originalWindow = globalThis.window;
+  const hadWindow = Object.prototype.hasOwnProperty.call(globalThis, "window");
+
+  let setItemCalls = 0;
+  globalThis.localStorage = {
+    getItem() {
+      throw new Error("unexpected localStorage access");
+    },
+    setItem() {
+      setItemCalls += 1;
+      throw new Error("unexpected localStorage access");
+    },
+    removeItem() {
+      throw new Error("unexpected localStorage access");
+    },
+  };
+
+  if (hadWindow) delete globalThis.window;
+
+  const modulePath = path.resolve(
+    __dirname,
+    "../dashboard/src/lib/auth-storage.js"
+  );
+  const { setSessionExpired } = await import(pathToFileURL(modulePath).href);
+
+  assert.doesNotThrow(() => {
+    setSessionExpired();
+  });
+  assert.equal(setItemCalls, 0);
+
+  if (hadWindow) globalThis.window = originalWindow;
+  else delete globalThis.window;
+  globalThis.localStorage = originalLocalStorage;
 });
