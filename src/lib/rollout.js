@@ -327,10 +327,13 @@ async function parseOpencodeIncremental({ messageFiles, cursors, queuePath, onPr
     }
 
     const fallbackTotals = prev && typeof prev.lastTotals === 'object' ? prev.lastTotals : null;
+    const fallbackMessageKey =
+      prev && typeof prev.messageKey === 'string' && prev.messageKey.trim() ? prev.messageKey.trim() : null;
     const result = await parseOpencodeMessageFile({
       filePath,
       messageIndex,
       fallbackTotals,
+      fallbackMessageKey,
       hourlyState,
       touchedBuckets,
       source: fileSource
@@ -567,23 +570,42 @@ async function parseOpencodeMessageFile({
   filePath,
   messageIndex,
   fallbackTotals,
+  fallbackMessageKey,
   hourlyState,
   touchedBuckets,
   source
 }) {
+  const fallbackKey =
+    typeof fallbackMessageKey === 'string' && fallbackMessageKey.trim() ? fallbackMessageKey.trim() : null;
+  const legacyTotals = fallbackTotals && typeof fallbackTotals === 'object' ? fallbackTotals : null;
+  const fallbackEntry = messageIndex && fallbackKey ? messageIndex[fallbackKey] : null;
+  const fallbackLastTotals =
+    fallbackEntry && typeof fallbackEntry.lastTotals === 'object' ? fallbackEntry.lastTotals : legacyTotals;
+
   const raw = await fs.readFile(filePath, 'utf8').catch(() => '');
-  if (!raw.trim()) return { messageKey: null, lastTotals: null, eventsAggregated: 0, shouldUpdate: false };
+  if (!raw.trim()) {
+    return {
+      messageKey: fallbackKey,
+      lastTotals: fallbackLastTotals,
+      eventsAggregated: 0,
+      shouldUpdate: false
+    };
+  }
 
   let msg;
   try {
     msg = JSON.parse(raw);
   } catch (_e) {
-    return { messageKey: null, lastTotals: null, eventsAggregated: 0, shouldUpdate: false };
+    return {
+      messageKey: fallbackKey,
+      lastTotals: fallbackLastTotals,
+      eventsAggregated: 0,
+      shouldUpdate: false
+    };
   }
 
   const messageKey = deriveOpencodeMessageKey(msg, filePath);
   const prev = messageIndex && messageKey ? messageIndex[messageKey] : null;
-  const legacyTotals = fallbackTotals && typeof fallbackTotals === 'object' ? fallbackTotals : null;
   const lastTotals = prev && typeof prev.lastTotals === 'object' ? prev.lastTotals : legacyTotals;
 
   const currentTotals = normalizeOpencodeTokens(msg?.tokens);
