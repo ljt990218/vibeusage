@@ -210,7 +210,7 @@ var require_model = __commonJS({
       const trimmed = value.trim();
       return trimmed.length > 0 ? trimmed : null;
     }
-    function normalizeUsageModel(value) {
+    function normalizeUsageModel2(value) {
       const normalized = normalizeModel(value);
       if (!normalized) return null;
       const lowered = normalized.toLowerCase();
@@ -228,7 +228,7 @@ var require_model = __commonJS({
       const terms = [];
       const seen = /* @__PURE__ */ new Set();
       for (const model of models) {
-        const normalized = normalizeUsageModel(model);
+        const normalized = normalizeUsageModel2(model);
         if (!normalized) continue;
         const safe = escapeLike(normalized);
         const exact = `model.ilike.${safe}`;
@@ -252,13 +252,13 @@ var require_model = __commonJS({
       const raw = url.searchParams.get("model");
       if (raw == null) return { ok: true, model: null };
       if (raw.trim() === "") return { ok: true, model: null };
-      const normalized = normalizeUsageModel(raw);
+      const normalized = normalizeUsageModel2(raw);
       if (!normalized) return { ok: false, error: "Invalid model" };
       return { ok: true, model: normalized };
     }
     module2.exports = {
       normalizeModel,
-      normalizeUsageModel,
+      normalizeUsageModel: normalizeUsageModel2,
       applyUsageModelFilter: applyUsageModelFilter2,
       getModelParam: getModelParam2
     };
@@ -1076,12 +1076,41 @@ var require_model_alias_timeline = __commonJS({
   }
 });
 
+// insforge-src/shared/usage-billable.js
+var require_usage_billable = __commonJS({
+  "insforge-src/shared/usage-billable.js"(exports2, module2) {
+    "use strict";
+    var { toBigInt: toBigInt2 } = require_numbers();
+    var { normalizeSource } = require_source();
+    var BILLABLE_INPUT_OUTPUT_REASONING = /* @__PURE__ */ new Set(["codex", "every-code"]);
+    var BILLABLE_ADD_ALL = /* @__PURE__ */ new Set(["claude", "opencode"]);
+    var BILLABLE_TOTAL = /* @__PURE__ */ new Set(["gemini"]);
+    function computeBillableTotalTokens2({ source, totals } = {}) {
+      const normalizedSource = normalizeSource(source) || "unknown";
+      const input = toBigInt2(totals?.input_tokens);
+      const cached = toBigInt2(totals?.cached_input_tokens);
+      const output = toBigInt2(totals?.output_tokens);
+      const reasoning = toBigInt2(totals?.reasoning_output_tokens);
+      const total = toBigInt2(totals?.total_tokens);
+      const hasTotal = Boolean(totals && Object.prototype.hasOwnProperty.call(totals, "total_tokens"));
+      if (BILLABLE_TOTAL.has(normalizedSource)) return total;
+      if (BILLABLE_ADD_ALL.has(normalizedSource)) return input + cached + output + reasoning;
+      if (BILLABLE_INPUT_OUTPUT_REASONING.has(normalizedSource)) return input + output + reasoning;
+      if (hasTotal) return total;
+      return input + output + reasoning;
+    }
+    module2.exports = {
+      computeBillableTotalTokens: computeBillableTotalTokens2
+    };
+  }
+});
+
 // insforge-src/functions/vibescore-usage-heatmap.js
 var { handleOptions, json } = require_http();
 var { getBearerToken, getEdgeClientAndUserIdFast } = require_auth();
 var { getBaseUrl } = require_env();
 var { getSourceParam } = require_source();
-var { getModelParam, applyUsageModelFilter } = require_model();
+var { getModelParam, applyUsageModelFilter, normalizeUsageModel } = require_model();
 var { resolveUsageModelsForCanonical } = require_model_identity();
 var { applyCanaryFilter } = require_canary();
 var {
@@ -1109,6 +1138,7 @@ var {
   fetchAliasRows,
   resolveIdentityAtDate
 } = require_model_alias_timeline();
+var { computeBillableTotalTokens } = require_usage_billable();
 module.exports = withRequestLogging("vibescore-usage-heatmap", async function(request, logger) {
   const opt = handleOptions(request);
   if (opt) return opt;
@@ -1171,7 +1201,7 @@ module.exports = withRequestLogging("vibescore-usage-heatmap", async function(re
     let rowCount2 = 0;
     const { error: error2 } = await forEachPage({
       createQuery: () => {
-        let query = auth2.edgeClient.database.from("vibescore_tracker_hourly").select("hour_start,model,total_tokens").eq("user_id", auth2.userId);
+        let query = auth2.edgeClient.database.from("vibescore_tracker_hourly").select("hour_start,source,billable_total_tokens,total_tokens,input_tokens,cached_input_tokens,output_tokens,reasoning_output_tokens").eq("user_id", auth2.userId);
         if (source) query = query.eq("source", source);
         if (hasModelFilter2) query = applyUsageModelFilter(query, usageModels2);
         query = applyCanaryFilter(query, { source, model: canonicalModel2 });
@@ -1186,14 +1216,19 @@ module.exports = withRequestLogging("vibescore-usage-heatmap", async function(re
           const dt = new Date(ts);
           if (!Number.isFinite(dt.getTime())) continue;
           if (hasModelFilter2) {
-            const rawModel = row?.model;
+            const rawModel = normalizeUsageModel(row?.model);
             const dateKey = extractDateKey(ts) || to2;
             const identity = resolveIdentityAtDate({ rawModel, dateKey, timeline: aliasTimeline2 });
             if (identity.model_id !== canonicalModel2) continue;
           }
           const day = formatDateUTC(dt);
           const prev = valuesByDay2.get(day) || 0n;
-          valuesByDay2.set(day, prev + toBigInt(row?.total_tokens));
+          const hasStoredBillable = row && Object.prototype.hasOwnProperty.call(row, "billable_total_tokens") && row.billable_total_tokens != null;
+          const billable = hasStoredBillable ? toBigInt(row.billable_total_tokens) : computeBillableTotalTokens({
+            source: row?.source || source,
+            totals: row
+          });
+          valuesByDay2.set(day, prev + billable);
         }
       }
     });
@@ -1311,7 +1346,7 @@ module.exports = withRequestLogging("vibescore-usage-heatmap", async function(re
   let rowCount = 0;
   const { error } = await forEachPage({
     createQuery: () => {
-      let query = auth.edgeClient.database.from("vibescore_tracker_hourly").select("hour_start,model,total_tokens").eq("user_id", auth.userId);
+      let query = auth.edgeClient.database.from("vibescore_tracker_hourly").select("hour_start,source,billable_total_tokens,total_tokens,input_tokens,cached_input_tokens,output_tokens,reasoning_output_tokens").eq("user_id", auth.userId);
       if (source) query = query.eq("source", source);
       if (hasModelFilter) query = applyUsageModelFilter(query, usageModels);
       query = applyCanaryFilter(query, { source, model: canonicalModel });
@@ -1333,7 +1368,12 @@ module.exports = withRequestLogging("vibescore-usage-heatmap", async function(re
         }
         const key = formatLocalDateKey(dt, tzContext);
         const prev = valuesByDay.get(key) || 0n;
-        valuesByDay.set(key, prev + toBigInt(row?.total_tokens));
+        const hasStoredBillable = row && Object.prototype.hasOwnProperty.call(row, "billable_total_tokens") && row.billable_total_tokens != null;
+        const billable = hasStoredBillable ? toBigInt(row.billable_total_tokens) : computeBillableTotalTokens({
+          source: row?.source || source,
+          totals: row
+        });
+        valuesByDay.set(key, prev + billable);
       }
     }
   });

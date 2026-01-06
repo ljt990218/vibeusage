@@ -287,6 +287,8 @@ async function parseOpencodeIncremental({ messageFiles, cursors, queuePath, onPr
   const files = Array.isArray(messageFiles) ? messageFiles : [];
   const totalFiles = files.length;
   const hourlyState = normalizeHourlyState(cursors?.hourly);
+  const opencodeState = normalizeOpencodeState(cursors?.opencode);
+  const messageIndex = opencodeState.messages;
   const touchedBuckets = new Set();
   const defaultSource = normalizeSourceInput(source) || 'opencode';
 
@@ -324,10 +326,14 @@ async function parseOpencodeIncremental({ messageFiles, cursors, queuePath, onPr
       continue;
     }
 
-    const lastTotals = prev && prev.inode === inode ? prev.lastTotals || null : null;
+    const fallbackTotals = prev && typeof prev.lastTotals === 'object' ? prev.lastTotals : null;
+    const fallbackMessageKey =
+      prev && typeof prev.messageKey === 'string' && prev.messageKey.trim() ? prev.messageKey.trim() : null;
     const result = await parseOpencodeMessageFile({
       filePath,
-      lastTotals,
+      messageIndex,
+      fallbackTotals,
+      fallbackMessageKey,
       hourlyState,
       touchedBuckets,
       source: fileSource
@@ -338,11 +344,19 @@ async function parseOpencodeIncremental({ messageFiles, cursors, queuePath, onPr
       size,
       mtimeMs,
       lastTotals: result.lastTotals,
+      messageKey: result.messageKey || null,
       updatedAt: new Date().toISOString()
     };
 
     filesProcessed += 1;
     eventsAggregated += result.eventsAggregated;
+
+    if (result.messageKey && result.shouldUpdate) {
+      messageIndex[result.messageKey] = {
+        lastTotals: result.lastTotals,
+        updatedAt: new Date().toISOString()
+      };
+    }
 
     if (cb) {
       cb({
@@ -359,6 +373,8 @@ async function parseOpencodeIncremental({ messageFiles, cursors, queuePath, onPr
   const bucketsQueued = await enqueueTouchedBuckets({ queuePath, hourlyState, touchedBuckets });
   hourlyState.updatedAt = new Date().toISOString();
   cursors.hourly = hourlyState;
+  opencodeState.updatedAt = new Date().toISOString();
+  cursors.opencode = opencodeState;
 
   return { filesProcessed, eventsAggregated, bucketsQueued };
 }
@@ -550,35 +566,86 @@ async function parseGeminiFile({
   };
 }
 
-async function parseOpencodeMessageFile({ filePath, lastTotals, hourlyState, touchedBuckets, source }) {
+async function parseOpencodeMessageFile({
+  filePath,
+  messageIndex,
+  fallbackTotals,
+  fallbackMessageKey,
+  hourlyState,
+  touchedBuckets,
+  source
+}) {
+  const fallbackKey =
+    typeof fallbackMessageKey === 'string' && fallbackMessageKey.trim() ? fallbackMessageKey.trim() : null;
+  const legacyTotals = fallbackTotals && typeof fallbackTotals === 'object' ? fallbackTotals : null;
+  const fallbackEntry = messageIndex && fallbackKey ? messageIndex[fallbackKey] : null;
+  const fallbackLastTotals =
+    fallbackEntry && typeof fallbackEntry.lastTotals === 'object' ? fallbackEntry.lastTotals : legacyTotals;
+
   const raw = await fs.readFile(filePath, 'utf8').catch(() => '');
-  if (!raw.trim()) return { lastTotals, eventsAggregated: 0 };
+  if (!raw.trim()) {
+    return {
+      messageKey: fallbackKey,
+      lastTotals: fallbackLastTotals,
+      eventsAggregated: 0,
+      shouldUpdate: false
+    };
+  }
 
   let msg;
   try {
     msg = JSON.parse(raw);
   } catch (_e) {
-    return { lastTotals, eventsAggregated: 0 };
+    return {
+      messageKey: fallbackKey,
+      lastTotals: fallbackLastTotals,
+      eventsAggregated: 0,
+      shouldUpdate: false
+    };
   }
 
+  const messageKey = deriveOpencodeMessageKey(msg, filePath);
+  const prev = messageIndex && messageKey ? messageIndex[messageKey] : null;
+  const indexTotals = prev && typeof prev.lastTotals === 'object' ? prev.lastTotals : null;
+  const fallbackMatch = !fallbackKey || fallbackKey === messageKey;
+  const lastTotals = indexTotals || (fallbackMatch ? fallbackLastTotals : null);
+
   const currentTotals = normalizeOpencodeTokens(msg?.tokens);
-  if (!currentTotals) return { lastTotals, eventsAggregated: 0 };
+  if (!currentTotals) {
+    return { messageKey, lastTotals, eventsAggregated: 0, shouldUpdate: false };
+  }
 
   const delta = diffGeminiTotals(currentTotals, lastTotals);
-  if (!delta || isAllZeroUsage(delta)) return { lastTotals: currentTotals, eventsAggregated: 0 };
+  if (!delta || isAllZeroUsage(delta)) {
+    return { messageKey, lastTotals: currentTotals, eventsAggregated: 0, shouldUpdate: true };
+  }
 
   const timestampMs = coerceEpochMs(msg?.time?.completed) || coerceEpochMs(msg?.time?.created);
-  if (!timestampMs) return { lastTotals, eventsAggregated: 0 };
+  if (!timestampMs) {
+    return {
+      messageKey,
+      lastTotals,
+      eventsAggregated: 0,
+      shouldUpdate: Boolean(lastTotals)
+    };
+  }
 
   const tsIso = new Date(timestampMs).toISOString();
   const bucketStart = toUtcHalfHourStart(tsIso);
-  if (!bucketStart) return { lastTotals, eventsAggregated: 0 };
+  if (!bucketStart) {
+    return {
+      messageKey,
+      lastTotals,
+      eventsAggregated: 0,
+      shouldUpdate: Boolean(lastTotals)
+    };
+  }
 
   const model = normalizeModelInput(msg?.modelID || msg?.model || msg?.modelId) || DEFAULT_MODEL;
   const bucket = getHourlyBucket(hourlyState, source, model, bucketStart);
   addTotals(bucket.totals, delta);
   touchedBuckets.add(bucketKey(source, model, bucketStart));
-  return { lastTotals: currentTotals, eventsAggregated: 1 };
+  return { messageKey, lastTotals: currentTotals, eventsAggregated: 1, shouldUpdate: true };
 }
 
 async function enqueueTouchedBuckets({ queuePath, hourlyState, touchedBuckets }) {
@@ -982,6 +1049,27 @@ function normalizeHourlyState(raw) {
   };
 }
 
+function normalizeOpencodeState(raw) {
+  const state = raw && typeof raw === 'object' ? raw : {};
+  const messages = state.messages && typeof state.messages === 'object' ? state.messages : {};
+  return {
+    messages,
+    updatedAt: typeof state.updatedAt === 'string' ? state.updatedAt : null
+  };
+}
+
+function normalizeMessageKeyPart(value) {
+  if (typeof value !== 'string') return '';
+  return value.trim();
+}
+
+function deriveOpencodeMessageKey(msg, fallback) {
+  const sessionId = normalizeMessageKeyPart(msg?.sessionID || msg?.sessionId || msg?.session_id);
+  const messageId = normalizeMessageKeyPart(msg?.id || msg?.messageID || msg?.messageId);
+  if (sessionId && messageId) return `${sessionId}|${messageId}`;
+  return fallback;
+}
+
 function getHourlyBucket(state, source, model, hourStart) {
   const buckets = state.buckets;
   const normalizedSource = normalizeSourceInput(source) || DEFAULT_SOURCE;
@@ -1114,10 +1202,12 @@ function normalizeOpencodeTokens(tokens) {
   const output = toNonNegativeInt(tokens.output);
   const reasoning = toNonNegativeInt(tokens.reasoning);
   const cached = toNonNegativeInt(tokens.cache?.read);
-  const total = input + output + reasoning;
+  const cacheWrite = toNonNegativeInt(tokens.cache?.write);
+  const inputTokens = input + cacheWrite;
+  const total = inputTokens + output + reasoning;
 
   return {
-    input_tokens: input,
+    input_tokens: inputTokens,
     cached_input_tokens: cached,
     output_tokens: output,
     reasoning_output_tokens: reasoning,
@@ -1217,7 +1307,7 @@ function normalizeUsage(u) {
 }
 
 function normalizeClaudeUsage(u) {
-  const inputTokens = toNonNegativeInt(u?.input_tokens);
+  const inputTokens = toNonNegativeInt(u?.input_tokens) + toNonNegativeInt(u?.cache_creation_input_tokens);
   const outputTokens = toNonNegativeInt(u?.output_tokens);
   const hasTotal = u && Object.prototype.hasOwnProperty.call(u, 'total_tokens');
   const totalTokens = hasTotal ? toNonNegativeInt(u?.total_tokens) : inputTokens + outputTokens;

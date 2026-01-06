@@ -7,7 +7,7 @@ const { handleOptions, json } = require('../shared/http');
 const { getBearerToken, getEdgeClientAndUserIdFast } = require('../shared/auth');
 const { getBaseUrl } = require('../shared/env');
 const { getSourceParam } = require('../shared/source');
-const { getModelParam, applyUsageModelFilter } = require('../shared/model');
+const { getModelParam, applyUsageModelFilter, normalizeUsageModel } = require('../shared/model');
 const { resolveUsageModelsForCanonical } = require('../shared/model-identity');
 const { applyCanaryFilter } = require('../shared/canary');
 const {
@@ -35,6 +35,7 @@ const {
   fetchAliasRows,
   resolveIdentityAtDate
 } = require('../shared/model-alias-timeline');
+const { computeBillableTotalTokens } = require('../shared/usage-billable');
 
 module.exports = withRequestLogging('vibescore-usage-heatmap', async function(request, logger) {
   const opt = handleOptions(request);
@@ -113,7 +114,7 @@ module.exports = withRequestLogging('vibescore-usage-heatmap', async function(re
       createQuery: () => {
         let query = auth.edgeClient.database
           .from('vibescore_tracker_hourly')
-          .select('hour_start,model,total_tokens')
+          .select('hour_start,source,billable_total_tokens,total_tokens,input_tokens,cached_input_tokens,output_tokens,reasoning_output_tokens')
           .eq('user_id', auth.userId);
         if (source) query = query.eq('source', source);
         if (hasModelFilter) query = applyUsageModelFilter(query, usageModels);
@@ -135,14 +136,24 @@ module.exports = withRequestLogging('vibescore-usage-heatmap', async function(re
           const dt = new Date(ts);
           if (!Number.isFinite(dt.getTime())) continue;
           if (hasModelFilter) {
-            const rawModel = row?.model;
+            const rawModel = normalizeUsageModel(row?.model);
             const dateKey = extractDateKey(ts) || to;
             const identity = resolveIdentityAtDate({ rawModel, dateKey, timeline: aliasTimeline });
             if (identity.model_id !== canonicalModel) continue;
           }
           const day = formatDateUTC(dt);
           const prev = valuesByDay.get(day) || 0n;
-          valuesByDay.set(day, prev + toBigInt(row?.total_tokens));
+          const hasStoredBillable =
+            row &&
+            Object.prototype.hasOwnProperty.call(row, 'billable_total_tokens') &&
+            row.billable_total_tokens != null;
+          const billable = hasStoredBillable
+            ? toBigInt(row.billable_total_tokens)
+            : computeBillableTotalTokens({
+                source: row?.source || source,
+                totals: row
+              });
+          valuesByDay.set(day, prev + billable);
         }
       }
     });
@@ -277,7 +288,7 @@ module.exports = withRequestLogging('vibescore-usage-heatmap', async function(re
     createQuery: () => {
       let query = auth.edgeClient.database
         .from('vibescore_tracker_hourly')
-        .select('hour_start,model,total_tokens')
+        .select('hour_start,source,billable_total_tokens,total_tokens,input_tokens,cached_input_tokens,output_tokens,reasoning_output_tokens')
         .eq('user_id', auth.userId);
       if (source) query = query.eq('source', source);
       if (hasModelFilter) query = applyUsageModelFilter(query, usageModels);
@@ -306,7 +317,17 @@ module.exports = withRequestLogging('vibescore-usage-heatmap', async function(re
         }
         const key = formatLocalDateKey(dt, tzContext);
         const prev = valuesByDay.get(key) || 0n;
-        valuesByDay.set(key, prev + toBigInt(row?.total_tokens));
+        const hasStoredBillable =
+          row &&
+          Object.prototype.hasOwnProperty.call(row, 'billable_total_tokens') &&
+          row.billable_total_tokens != null;
+        const billable = hasStoredBillable
+          ? toBigInt(row.billable_total_tokens)
+          : computeBillableTotalTokens({
+              source: row?.source || source,
+              totals: row
+            });
+        valuesByDay.set(key, prev + billable);
       }
     }
   });

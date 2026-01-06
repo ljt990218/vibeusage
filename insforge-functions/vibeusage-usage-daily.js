@@ -1014,6 +1014,7 @@ var require_usage_rollup = __commonJS({
     function createTotals() {
       return {
         total_tokens: 0n,
+        billable_total_tokens: 0n,
         input_tokens: 0n,
         cached_input_tokens: 0n,
         output_tokens: 0n,
@@ -1023,6 +1024,7 @@ var require_usage_rollup = __commonJS({
     function addRowTotals(target, row) {
       if (!target || !row) return;
       target.total_tokens += toBigInt(row?.total_tokens);
+      target.billable_total_tokens += toBigInt(row?.billable_total_tokens);
       target.input_tokens += toBigInt(row?.input_tokens);
       target.cached_input_tokens += toBigInt(row?.cached_input_tokens);
       target.output_tokens += toBigInt(row?.output_tokens);
@@ -1062,6 +1064,35 @@ var require_usage_rollup = __commonJS({
       fetchRollupRows,
       sumRollupRows,
       isRollupEnabled
+    };
+  }
+});
+
+// insforge-src/shared/usage-billable.js
+var require_usage_billable = __commonJS({
+  "insforge-src/shared/usage-billable.js"(exports2, module2) {
+    "use strict";
+    var { toBigInt } = require_numbers();
+    var { normalizeSource } = require_source();
+    var BILLABLE_INPUT_OUTPUT_REASONING = /* @__PURE__ */ new Set(["codex", "every-code"]);
+    var BILLABLE_ADD_ALL = /* @__PURE__ */ new Set(["claude", "opencode"]);
+    var BILLABLE_TOTAL = /* @__PURE__ */ new Set(["gemini"]);
+    function computeBillableTotalTokens({ source, totals } = {}) {
+      const normalizedSource = normalizeSource(source) || "unknown";
+      const input = toBigInt(totals?.input_tokens);
+      const cached = toBigInt(totals?.cached_input_tokens);
+      const output = toBigInt(totals?.output_tokens);
+      const reasoning = toBigInt(totals?.reasoning_output_tokens);
+      const total = toBigInt(totals?.total_tokens);
+      const hasTotal = Boolean(totals && Object.prototype.hasOwnProperty.call(totals, "total_tokens"));
+      if (BILLABLE_TOTAL.has(normalizedSource)) return total;
+      if (BILLABLE_ADD_ALL.has(normalizedSource)) return input + cached + output + reasoning;
+      if (BILLABLE_INPUT_OUTPUT_REASONING.has(normalizedSource)) return input + output + reasoning;
+      if (hasTotal) return total;
+      return input + output + reasoning;
+    }
+    module2.exports = {
+      computeBillableTotalTokens
     };
   }
 });
@@ -1384,6 +1415,7 @@ var require_vibescore_usage_daily = __commonJS({
       fetchRollupRows,
       isRollupEnabled
     } = require_usage_rollup();
+    var { computeBillableTotalTokens } = require_usage_billable();
     var { logSlowQuery, withRequestLogging } = require_logging();
     var { isDebugEnabled, withSlowQueryDebugPayload } = require_debug();
     var {
@@ -1456,6 +1488,7 @@ var require_vibescore_usage_daily = __commonJS({
           day,
           {
             total: 0n,
+            billable: 0n,
             input: 0n,
             cached: 0n,
             output: 0n,
@@ -1476,16 +1509,14 @@ var require_vibescore_usage_daily = __commonJS({
         rollupHit = false;
       };
       const ingestRow = (row) => {
-        if (hasModelFilter) {
-          const rawModel = normalizeUsageModel(row?.model);
-          const dateKey = extractDateKey(row?.hour_start || row?.day) || to;
-          const identity = resolveIdentityAtDate({ rawModel, dateKey, timeline: aliasTimeline });
-          if (identity.model_id !== canonicalModel) return;
-        }
-        addRowTotals(totals, row);
         const sourceKey = normalizeSource(row?.source) || "codex";
+        const hasStoredBillable = row && Object.prototype.hasOwnProperty.call(row, "billable_total_tokens") && row.billable_total_tokens != null;
+        const billable = hasStoredBillable ? toBigInt(row.billable_total_tokens) : computeBillableTotalTokens({ source: sourceKey, totals: row });
+        addRowTotals(totals, row);
+        if (!hasStoredBillable) totals.billable_total_tokens += billable;
         const sourceEntry = getSourceEntry(sourcesMap, sourceKey);
         addRowTotals(sourceEntry.totals, row);
+        if (!hasStoredBillable) sourceEntry.totals.billable_total_tokens += billable;
         const normalizedModel = normalizeUsageModel(row?.model);
         if (normalizedModel && normalizedModel !== "unknown") {
           distinctModels.add(normalizedModel);
@@ -1499,6 +1530,7 @@ var require_vibescore_usage_daily = __commonJS({
           pricingBuckets.set(bucketKey, bucket);
           distinctUsageModels.add(usageKey);
         }
+        return billable;
       };
       const queryStartMs = Date.now();
       let rowCount = 0;
@@ -1508,7 +1540,7 @@ var require_vibescore_usage_daily = __commonJS({
       const sumHourlyRange = async () => {
         const { error } = await forEachPage({
           createQuery: () => {
-            let query = auth.edgeClient.database.from("vibescore_tracker_hourly").select("hour_start,source,model,total_tokens,input_tokens,cached_input_tokens,output_tokens,reasoning_output_tokens").eq("user_id", auth.userId);
+            let query = auth.edgeClient.database.from("vibescore_tracker_hourly").select("hour_start,source,model,billable_total_tokens,total_tokens,input_tokens,cached_input_tokens,output_tokens,reasoning_output_tokens").eq("user_id", auth.userId);
             if (source) query = query.eq("source", source);
             if (hasModelFilter) query = applyUsageModelFilter(query, usageModels);
             query = applyCanaryFilter(query, { source, model: canonicalModel });
@@ -1532,11 +1564,12 @@ var require_vibescore_usage_daily = __commonJS({
               const bucket = buckets.get(day);
               if (!bucket) continue;
               bucket.total += toBigInt(row?.total_tokens);
+              const billable = ingestRow(row);
+              bucket.billable += billable;
               bucket.input += toBigInt(row?.input_tokens);
               bucket.cached += toBigInt(row?.cached_input_tokens);
               bucket.output += toBigInt(row?.output_tokens);
               bucket.reasoning += toBigInt(row?.reasoning_output_tokens);
-              ingestRow(row);
             }
           }
         });
@@ -1569,12 +1602,19 @@ var require_vibescore_usage_daily = __commonJS({
             const day = row?.day;
             const bucket = buckets.get(day);
             if (!bucket) continue;
+            if (hasModelFilter) {
+              const rawModel = normalizeUsageModel(row?.model);
+              const dateKey = extractDateKey(day) || to;
+              const identity = resolveIdentityAtDate({ rawModel, dateKey, timeline: aliasTimeline });
+              if (identity.model_id !== canonicalModel) continue;
+            }
             bucket.total += toBigInt(row?.total_tokens);
+            const billable = ingestRow(row);
+            bucket.billable += billable;
             bucket.input += toBigInt(row?.input_tokens);
             bucket.cached += toBigInt(row?.cached_input_tokens);
             bucket.output += toBigInt(row?.output_tokens);
             bucket.reasoning += toBigInt(row?.reasoning_output_tokens);
-            ingestRow(row);
           }
           if (rows2.length === 0) {
             const hourlyCheck = await hasHourlyData(startIso, endIso);
@@ -1670,6 +1710,7 @@ var require_vibescore_usage_daily = __commonJS({
         return {
           day,
           total_tokens: bucket.total.toString(),
+          billable_total_tokens: bucket.billable.toString(),
           input_tokens: bucket.input.toString(),
           cached_input_tokens: bucket.cached.toString(),
           output_tokens: bucket.output.toString(),
@@ -1702,6 +1743,7 @@ var require_vibescore_usage_daily = __commonJS({
       const summary = {
         totals: {
           total_tokens: totals.total_tokens.toString(),
+          billable_total_tokens: totals.billable_total_tokens.toString(),
           input_tokens: totals.input_tokens.toString(),
           cached_input_tokens: totals.cached_input_tokens.toString(),
           output_tokens: totals.output_tokens.toString(),

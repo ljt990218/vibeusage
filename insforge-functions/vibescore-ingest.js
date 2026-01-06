@@ -441,13 +441,13 @@ var require_source = __commonJS({
 var require_model = __commonJS({
   "insforge-src/shared/model.js"(exports2, module2) {
     "use strict";
-    function normalizeModel(value) {
+    function normalizeModel2(value) {
       if (typeof value !== "string") return null;
       const trimmed = value.trim();
       return trimmed.length > 0 ? trimmed : null;
     }
-    function normalizeUsageModel2(value) {
-      const normalized = normalizeModel(value);
+    function normalizeUsageModel(value) {
+      const normalized = normalizeModel2(value);
       if (!normalized) return null;
       const lowered = normalized.toLowerCase();
       if (!lowered) return null;
@@ -464,7 +464,7 @@ var require_model = __commonJS({
       const terms = [];
       const seen = /* @__PURE__ */ new Set();
       for (const model of models) {
-        const normalized = normalizeUsageModel2(model);
+        const normalized = normalizeUsageModel(model);
         if (!normalized) continue;
         const safe = escapeLike(normalized);
         const exact = `model.ilike.${safe}`;
@@ -488,15 +488,92 @@ var require_model = __commonJS({
       const raw = url.searchParams.get("model");
       if (raw == null) return { ok: true, model: null };
       if (raw.trim() === "") return { ok: true, model: null };
-      const normalized = normalizeUsageModel2(raw);
+      const normalized = normalizeUsageModel(raw);
       if (!normalized) return { ok: false, error: "Invalid model" };
       return { ok: true, model: normalized };
     }
     module2.exports = {
-      normalizeModel,
-      normalizeUsageModel: normalizeUsageModel2,
+      normalizeModel: normalizeModel2,
+      normalizeUsageModel,
       applyUsageModelFilter,
       getModelParam
+    };
+  }
+});
+
+// insforge-src/shared/numbers.js
+var require_numbers = __commonJS({
+  "insforge-src/shared/numbers.js"(exports2, module2) {
+    "use strict";
+    function toBigInt(v) {
+      if (typeof v === "bigint") return v >= 0n ? v : 0n;
+      if (typeof v === "number") {
+        if (!Number.isFinite(v) || v <= 0) return 0n;
+        return BigInt(Math.floor(v));
+      }
+      if (typeof v === "string") {
+        const s = v.trim();
+        if (!/^[0-9]+$/.test(s)) return 0n;
+        try {
+          return BigInt(s);
+        } catch (_e) {
+          return 0n;
+        }
+      }
+      return 0n;
+    }
+    function toPositiveIntOrNull(v) {
+      if (typeof v === "number" && Number.isInteger(v) && v > 0) return v;
+      if (typeof v === "string") {
+        const s = v.trim();
+        if (!/^[0-9]+$/.test(s)) return null;
+        const n = Number.parseInt(s, 10);
+        return Number.isFinite(n) && n > 0 ? n : null;
+      }
+      if (typeof v === "bigint") {
+        if (v <= 0n) return null;
+        const n = Number(v);
+        return Number.isFinite(n) && n > 0 ? n : null;
+      }
+      return null;
+    }
+    function toPositiveInt(v) {
+      const n = toPositiveIntOrNull(v);
+      return n == null ? 0 : n;
+    }
+    module2.exports = {
+      toBigInt,
+      toPositiveInt,
+      toPositiveIntOrNull
+    };
+  }
+});
+
+// insforge-src/shared/usage-billable.js
+var require_usage_billable = __commonJS({
+  "insforge-src/shared/usage-billable.js"(exports2, module2) {
+    "use strict";
+    var { toBigInt } = require_numbers();
+    var { normalizeSource: normalizeSource2 } = require_source();
+    var BILLABLE_INPUT_OUTPUT_REASONING = /* @__PURE__ */ new Set(["codex", "every-code"]);
+    var BILLABLE_ADD_ALL = /* @__PURE__ */ new Set(["claude", "opencode"]);
+    var BILLABLE_TOTAL = /* @__PURE__ */ new Set(["gemini"]);
+    function computeBillableTotalTokens2({ source, totals } = {}) {
+      const normalizedSource = normalizeSource2(source) || "unknown";
+      const input = toBigInt(totals?.input_tokens);
+      const cached = toBigInt(totals?.cached_input_tokens);
+      const output = toBigInt(totals?.output_tokens);
+      const reasoning = toBigInt(totals?.reasoning_output_tokens);
+      const total = toBigInt(totals?.total_tokens);
+      const hasTotal = Boolean(totals && Object.prototype.hasOwnProperty.call(totals, "total_tokens"));
+      if (BILLABLE_TOTAL.has(normalizedSource)) return total;
+      if (BILLABLE_ADD_ALL.has(normalizedSource)) return input + cached + output + reasoning;
+      if (BILLABLE_INPUT_OUTPUT_REASONING.has(normalizedSource)) return input + output + reasoning;
+      if (hasTotal) return total;
+      return input + output + reasoning;
+    }
+    module2.exports = {
+      computeBillableTotalTokens: computeBillableTotalTokens2
     };
   }
 });
@@ -509,9 +586,11 @@ var { getBearerToken } = require_auth();
 var { getAnonKey, getBaseUrl, getServiceRoleKey } = require_env();
 var { sha256Hex } = require_crypto();
 var { normalizeSource } = require_source();
-var { normalizeUsageModel } = require_model();
+var { normalizeModel } = require_model();
+var { computeBillableTotalTokens } = require_usage_billable();
 var MAX_BUCKETS = 500;
 var DEFAULT_MODEL = "unknown";
+var BILLABLE_RULE_VERSION = 1;
 var ingestGuard = createConcurrencyGuard({
   name: "vibescore-ingest",
   envKey: ["VIBEUSAGE_INGEST_MAX_INFLIGHT", "VIBESCORE_INGEST_MAX_INFLIGHT"],
@@ -620,6 +699,7 @@ function buildRows({ hourly, tokenRow, nowIso }) {
   }
   const rows = [];
   for (const bucket of byHour.values()) {
+    const billable = computeBillableTotalTokens({ source: bucket.source, totals: bucket });
     rows.push({
       user_id: tokenRow.user_id,
       device_id: tokenRow.device_id,
@@ -632,6 +712,8 @@ function buildRows({ hourly, tokenRow, nowIso }) {
       output_tokens: bucket.output_tokens,
       reasoning_output_tokens: bucket.reasoning_output_tokens,
       total_tokens: bucket.total_tokens,
+      billable_total_tokens: billable.toString(),
+      billable_rule_version: BILLABLE_RULE_VERSION,
       updated_at: nowIso
     });
   }
@@ -889,7 +971,7 @@ function parseHourlyBucket(raw) {
     return { ok: false, error: "hour_start must be an ISO timestamp at UTC half-hour boundary" };
   }
   const source = normalizeSource(raw.source);
-  const model = normalizeUsageModel(raw.model) || DEFAULT_MODEL;
+  const model = normalizeModel(raw.model) || DEFAULT_MODEL;
   const input = toNonNegativeInt(raw.input_tokens);
   const cached = toNonNegativeInt(raw.cached_input_tokens);
   const output = toNonNegativeInt(raw.output_tokens);

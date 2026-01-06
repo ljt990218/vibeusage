@@ -33,6 +33,7 @@ const {
   formatUsdFromMicros,
   resolvePricingProfile
 } = require('../shared/pricing');
+const { computeBillableTotalTokens } = require('../shared/usage-billable');
 const { logSlowQuery, withRequestLogging } = require('../shared/logging');
 const { isDebugEnabled, withSlowQueryDebugPayload } = require('../shared/debug');
 
@@ -94,7 +95,7 @@ module.exports = withRequestLogging('vibescore-usage-model-breakdown', async fun
       let query = auth.edgeClient.database
         .from('vibescore_tracker_hourly')
         .select(
-          'hour_start,source,model,total_tokens,input_tokens,cached_input_tokens,output_tokens,reasoning_output_tokens'
+          'hour_start,source,model,billable_total_tokens,total_tokens,input_tokens,cached_input_tokens,output_tokens,reasoning_output_tokens'
         )
         .eq('user_id', auth.userId);
       if (sourceFilter) query = query.eq('source', sourceFilter);
@@ -114,12 +115,20 @@ module.exports = withRequestLogging('vibescore-usage-model-breakdown', async fun
         const source = normalizeSource(row?.source) || DEFAULT_SOURCE;
         const model = normalizeUsageModel(row?.model) || DEFAULT_MODEL;
         const usageKey = normalizeUsageModelKey(model);
+        const hasStoredBillable =
+          row &&
+          Object.prototype.hasOwnProperty.call(row, 'billable_total_tokens') &&
+          row.billable_total_tokens != null;
+        const billable = hasStoredBillable
+          ? toBigInt(row.billable_total_tokens)
+          : computeBillableTotalTokens({ source, totals: row });
         rowsBuffer.push({
           source,
           model,
           usageKey,
           hour_start: row?.hour_start,
           total_tokens: row?.total_tokens,
+          billable_total_tokens: hasStoredBillable ? row.billable_total_tokens : billable.toString(),
           input_tokens: row?.input_tokens,
           cached_input_tokens: row?.cached_input_tokens,
           output_tokens: row?.output_tokens,
@@ -216,6 +225,7 @@ module.exports = withRequestLogging('vibescore-usage-model-breakdown', async fun
 function createTotals() {
   return {
     total_tokens: 0n,
+    billable_total_tokens: 0n,
     input_tokens: 0n,
     cached_input_tokens: 0n,
     output_tokens: 0n,
@@ -226,6 +236,7 @@ function createTotals() {
 function addTotals(target, row) {
   if (!target || !row) return;
   target.total_tokens = toBigInt(target.total_tokens) + toBigInt(row.total_tokens);
+  target.billable_total_tokens = toBigInt(target.billable_total_tokens) + toBigInt(row.billable_total_tokens);
   target.input_tokens = toBigInt(target.input_tokens) + toBigInt(row.input_tokens);
   target.cached_input_tokens =
     toBigInt(target.cached_input_tokens) + toBigInt(row.cached_input_tokens);
@@ -265,6 +276,7 @@ function formatTotals(entry, pricingProfile) {
     ...entry,
     totals: {
       total_tokens: totals.total_tokens.toString(),
+      billable_total_tokens: totals.billable_total_tokens.toString(),
       input_tokens: totals.input_tokens.toString(),
       cached_input_tokens: totals.cached_input_tokens.toString(),
       output_tokens: totals.output_tokens.toString(),
@@ -275,8 +287,8 @@ function formatTotals(entry, pricingProfile) {
 }
 
 function compareTotals(a, b) {
-  const aTotal = toBigInt(a?.totals?.total_tokens);
-  const bTotal = toBigInt(b?.totals?.total_tokens);
-  if (aTotal === bTotal) return String(a?.model || '').localeCompare(String(b?.model || ''));
-  return aTotal > bTotal ? -1 : 1;
+  const aSort = toBigInt(a?.totals?.billable_total_tokens ?? a?.totals?.total_tokens);
+  const bSort = toBigInt(b?.totals?.billable_total_tokens ?? b?.totals?.total_tokens);
+  if (aSort === bSort) return String(a?.model || '').localeCompare(String(b?.model || ''));
+  return aSort > bSort ? -1 : 1;
 }
