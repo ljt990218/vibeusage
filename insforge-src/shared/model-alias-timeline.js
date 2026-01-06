@@ -13,13 +13,14 @@ function extractDateKey(value) {
 
 function resolveIdentityAtDate({ rawModel, usageKey, dateKey, timeline } = {}) {
   const normalized = usageKey || normalizeUsageModelKey(rawModel) || DEFAULT_MODEL;
+  const normalizedDateKey = extractDateKey(dateKey) || dateKey || null;
   const entries = timeline && typeof timeline.get === 'function' ? timeline.get(normalized) : null;
   if (Array.isArray(entries)) {
     let match = null;
     for (const entry of entries) {
-      if (entry.effective_from && entry.effective_from <= dateKey) {
+      if (entry.effective_from && normalizedDateKey && entry.effective_from <= normalizedDateKey) {
         match = entry;
-      } else if (entry.effective_from && entry.effective_from > dateKey) {
+      } else if (entry.effective_from && normalizedDateKey && entry.effective_from > normalizedDateKey) {
         break;
       }
     }
@@ -45,7 +46,7 @@ function buildAliasTimeline({ usageModels, aliasRows } = {}) {
     if (!usageKey || !canonical) continue;
     if (normalized.size && !normalized.has(usageKey)) continue;
     const display = normalizeModel(row?.display_name) || canonical;
-    const effective = String(row?.effective_from || '');
+    const effective = extractDateKey(row?.effective_from || '');
     if (!effective) continue;
     const entry = {
       model_id: canonical,

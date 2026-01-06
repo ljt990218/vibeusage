@@ -2665,6 +2665,29 @@ test('getUsageMaxDays defaults to 800 days', { concurrency: 1 }, () => {
   }
 });
 
+test('resolveIdentityAtDate uses date portion of effective_from timestamps', () => {
+  const { buildAliasTimeline, resolveIdentityAtDate } = require('../insforge-src/shared/model-alias-timeline');
+
+  const aliasRows = [
+    {
+      usage_model: 'gpt-foo',
+      canonical_model: 'alpha',
+      display_name: 'Alpha',
+      effective_from: '2025-01-01T00:00:00+00:00',
+      active: true
+    }
+  ];
+
+  const timeline = buildAliasTimeline({ usageModels: ['gpt-foo'], aliasRows });
+  const identity = resolveIdentityAtDate({
+    rawModel: 'gpt-foo',
+    dateKey: '2025-01-01',
+    timeline
+  });
+
+  assert.equal(identity.model_id, 'alpha');
+});
+
 test('vibeusage-usage-daily rejects oversized ranges', { concurrency: 1 }, async () => {
   const fn = require('../insforge-functions/vibeusage-usage-daily');
   const prevMaxDays = process.env.VIBEUSAGE_USAGE_MAX_DAYS;

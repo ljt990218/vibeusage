@@ -355,13 +355,14 @@ var require_model_alias_timeline = __commonJS({
     }
     function resolveIdentityAtDate2({ rawModel, usageKey, dateKey, timeline } = {}) {
       const normalized = usageKey || normalizeUsageModelKey2(rawModel) || DEFAULT_MODEL2;
+      const normalizedDateKey = extractDateKey2(dateKey) || dateKey || null;
       const entries = timeline && typeof timeline.get === "function" ? timeline.get(normalized) : null;
       if (Array.isArray(entries)) {
         let match = null;
         for (const entry of entries) {
-          if (entry.effective_from && entry.effective_from <= dateKey) {
+          if (entry.effective_from && normalizedDateKey && entry.effective_from <= normalizedDateKey) {
             match = entry;
-          } else if (entry.effective_from && entry.effective_from > dateKey) {
+          } else if (entry.effective_from && normalizedDateKey && entry.effective_from > normalizedDateKey) {
             break;
           }
         }
@@ -384,7 +385,7 @@ var require_model_alias_timeline = __commonJS({
         if (!usageKey || !canonical) continue;
         if (normalized.size && !normalized.has(usageKey)) continue;
         const display = normalizeModel2(row?.display_name) || canonical;
-        const effective = String(row?.effective_from || "");
+        const effective = extractDateKey2(row?.effective_from || "");
         if (!effective) continue;
         const entry = {
           model_id: canonical,
