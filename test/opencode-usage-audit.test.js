@@ -100,3 +100,24 @@ test('auditOpencodeUsage derives day range from local data', async () => {
     await fs.rm(tmp, { recursive: true, force: true });
   }
 });
+
+test('runAuditCli returns 2 when diffs exist', async () => {
+  const { runAuditCli } = require('../scripts/ops/opencode-usage-audit.cjs');
+  const code = await runAuditCli(['--from', '2025-12-29', '--to', '2025-12-29'], {
+    env: { VIBEUSAGE_ACCESS_TOKEN: 'token' },
+    audit: async () => ({
+      summary: { days: 1, slots: 48, matched: 47, mismatched: 1, maxDelta: 10n },
+      diffs: [
+        {
+          hour: '2025-12-29T10:00:00',
+          local: { total_tokens: 5n },
+          server: { total_tokens: 10n },
+          delta: { total_tokens: -5n }
+        }
+      ]
+    }),
+    log: () => {},
+    error: () => {}
+  });
+  assert.equal(code, 2);
+});
