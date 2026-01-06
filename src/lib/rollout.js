@@ -598,13 +598,23 @@ async function parseOpencodeMessageFile({
 
   const timestampMs = coerceEpochMs(msg?.time?.completed) || coerceEpochMs(msg?.time?.created);
   if (!timestampMs) {
-    return { messageKey, lastTotals: currentTotals, eventsAggregated: 0, shouldUpdate: true };
+    return {
+      messageKey,
+      lastTotals,
+      eventsAggregated: 0,
+      shouldUpdate: Boolean(lastTotals)
+    };
   }
 
   const tsIso = new Date(timestampMs).toISOString();
   const bucketStart = toUtcHalfHourStart(tsIso);
   if (!bucketStart) {
-    return { messageKey, lastTotals: currentTotals, eventsAggregated: 0, shouldUpdate: true };
+    return {
+      messageKey,
+      lastTotals,
+      eventsAggregated: 0,
+      shouldUpdate: Boolean(lastTotals)
+    };
   }
 
   const model = normalizeModelInput(msg?.modelID || msg?.model || msg?.modelId) || DEFAULT_MODEL;

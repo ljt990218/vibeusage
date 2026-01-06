@@ -549,6 +549,44 @@ test('parseOpencodeIncremental falls back to legacy cursors when opencode state 
   }
 });
 
+test('parseOpencodeIncremental counts usage once timestamp appears', async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'vibescore-opencode-'));
+  try {
+    const messageDir = path.join(tmp, 'message', 'ses_test');
+    await fs.mkdir(messageDir, { recursive: true });
+    const messagePath = path.join(messageDir, 'msg_test.json');
+    const queuePath = path.join(tmp, 'queue.jsonl');
+    const cursors = { version: 1, files: {}, updatedAt: null };
+
+    const messageNoTime = buildOpencodeMessage({
+      modelID: 'gpt-4o',
+      tokens: { input: 4, output: 1, reasoning: 0, cached: 0 }
+    });
+
+    await fs.writeFile(messagePath, JSON.stringify(messageNoTime), 'utf8');
+    const res = await parseOpencodeIncremental({ messageFiles: [messagePath], cursors, queuePath });
+    assert.equal(res.bucketsQueued, 0);
+
+    await fs.rm(messagePath);
+    const messageWithTime = buildOpencodeMessage({
+      modelID: 'gpt-4o',
+      created: '2025-12-29T10:14:00.000Z',
+      completed: '2025-12-29T10:15:00.000Z',
+      tokens: { input: 4, output: 1, reasoning: 0, cached: 0 }
+    });
+    await fs.writeFile(messagePath, JSON.stringify(messageWithTime), 'utf8');
+
+    const resAgain = await parseOpencodeIncremental({ messageFiles: [messagePath], cursors, queuePath });
+    assert.equal(resAgain.bucketsQueued, 1);
+
+    const queued = await readJsonLines(queuePath);
+    assert.equal(queued.length, 1);
+    assert.equal(queued[0].total_tokens, 5);
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
 test('parseOpencodeIncremental updates totals after message rewrite with new tokens', async () => {
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'vibescore-opencode-'));
   try {

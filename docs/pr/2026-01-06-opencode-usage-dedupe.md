@@ -6,6 +6,7 @@ Prevent Opencode message rewrites from double counting token usage.
 ## Commit Narrative
 - fix(rollout): track opencode message keys to prevent rewrite double count
 - fix(rollout): fall back to legacy file totals when opencode state missing
+- fix(rollout): defer opencode totals when timestamp missing
 - test(rollout): cover opencode message rewrite scenarios
 - docs(pr): record regression command and result
 
