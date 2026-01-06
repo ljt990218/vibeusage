@@ -2327,6 +2327,69 @@ test('vibeusage-usage-model-breakdown prefers stored billable_total_tokens', asy
   assert.equal(claudeModel?.totals?.billable_total_tokens, '6');
 });
 
+test('vibeusage-usage-model-breakdown sorts models by billable_total_tokens', async () => {
+  const fn = require('../insforge-functions/vibeusage-usage-model-breakdown');
+
+  const userId = '77777777-7777-7777-7777-777777777777';
+  const userJwt = 'user_jwt_test';
+
+  const rows = [
+    {
+      source: 'codex',
+      model: 'gpt-4o',
+      total_tokens: '100',
+      input_tokens: '40',
+      cached_input_tokens: '10',
+      output_tokens: '30',
+      reasoning_output_tokens: '20',
+      billable_total_tokens: '30'
+    },
+    {
+      source: 'codex',
+      model: 'gpt-4.1',
+      total_tokens: '60',
+      input_tokens: '20',
+      cached_input_tokens: '10',
+      output_tokens: '20',
+      reasoning_output_tokens: '10',
+      billable_total_tokens: '50'
+    }
+  ];
+
+  globalThis.createClient = (args) => {
+    if (args && args.edgeFunctionToken === userJwt) {
+      return {
+        auth: {
+          getCurrentUser: async () => ({ data: { user: { id: userId } }, error: null })
+        },
+        database: {
+          from: (table) => {
+            assert.equal(table, 'vibescore_tracker_hourly');
+            const query = createQueryMock({ rows });
+            return { select: () => query };
+          }
+        }
+      };
+    }
+    throw new Error(`Unexpected createClient args: ${JSON.stringify(args)}`);
+  };
+
+  const req = new Request(
+    'http://localhost/functions/vibeusage-usage-model-breakdown?from=2025-12-20&to=2025-12-20',
+    {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${userJwt}` }
+    }
+  );
+
+  const res = await fn(req);
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  const sourceEntry = body.sources.find((entry) => entry.source === 'codex');
+  assert.ok(Array.isArray(sourceEntry?.models));
+  assert.equal(sourceEntry.models[0]?.model, 'gpt-4.1');
+});
+
 test('vibeusage-usage-model-breakdown rejects oversized ranges', { concurrency: 1 }, async () => {
   const fn = require('../insforge-functions/vibeusage-usage-model-breakdown');
   const prevMaxDays = process.env.VIBEUSAGE_USAGE_MAX_DAYS;

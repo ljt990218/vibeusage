@@ -197,3 +197,7 @@ Run:
 - `node --test test/usage-aggregate.test.js`
 
 Record results in the delivery summary.
+
+## Regression Log
+
+- 2026-01-06: `node --test test/edge-functions.test.js --test-name-pattern "model-breakdown sorts"` -> PASS

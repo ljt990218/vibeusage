@@ -241,8 +241,8 @@ function formatTotals(entry, pricingProfile) {
 }
 
 function compareTotals(a, b) {
-  const aTotal = toBigInt(a?.totals?.total_tokens);
-  const bTotal = toBigInt(b?.totals?.total_tokens);
-  if (aTotal === bTotal) return String(a?.model || '').localeCompare(String(b?.model || ''));
-  return aTotal > bTotal ? -1 : 1;
+  const aSort = toBigInt(a?.totals?.billable_total_tokens ?? a?.totals?.total_tokens);
+  const bSort = toBigInt(b?.totals?.billable_total_tokens ?? b?.totals?.total_tokens);
+  if (aSort === bSort) return String(a?.model || '').localeCompare(String(b?.model || ''));
+  return aSort > bSort ? -1 : 1;
 }
