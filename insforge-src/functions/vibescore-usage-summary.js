@@ -293,6 +293,7 @@ module.exports = withRequestLogging('vibescore-usage-summary', async function(re
   const impliedModelId =
     canonicalModel || (canonicalModels.size === 1 ? Array.from(canonicalModels)[0] : null);
   const impliedModelDisplay = resolveDisplayName(identityMap, impliedModelId);
+  const hasModelParam = model != null;
   const pricingProfile = await resolvePricingProfile({
     edgeClient: auth.edgeClient,
     model: impliedModelId,
@@ -338,8 +339,8 @@ module.exports = withRequestLogging('vibescore-usage-summary', async function(re
       from,
       to,
       days: dayKeys.length,
-      model_id: impliedModelId || null,
-      model: impliedModelId ? impliedModelDisplay : null,
+      model_id: hasModelParam ? impliedModelId || null : null,
+      model: hasModelParam && impliedModelId ? impliedModelDisplay : null,
       totals: totalsPayload,
       pricing: buildPricingMetadata({
         profile: overallCost.profile,

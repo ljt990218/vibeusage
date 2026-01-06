@@ -1450,6 +1450,7 @@ var require_vibescore_usage_summary = __commonJS({
       }
       const impliedModelId = canonicalModel || (canonicalModels.size === 1 ? Array.from(canonicalModels)[0] : null);
       const impliedModelDisplay = resolveDisplayName(identityMap, impliedModelId);
+      const hasModelParam = model != null;
       const pricingProfile = await resolvePricingProfile({
         edgeClient: auth.edgeClient,
         model: impliedModelId,
@@ -1491,8 +1492,8 @@ var require_vibescore_usage_summary = __commonJS({
           from,
           to,
           days: dayKeys.length,
-          model_id: impliedModelId || null,
-          model: impliedModelId ? impliedModelDisplay : null,
+          model_id: hasModelParam ? impliedModelId || null : null,
+          model: hasModelParam && impliedModelId ? impliedModelDisplay : null,
           totals: totalsPayload,
           pricing: buildPricingMetadata({
             profile: overallCost.profile,
