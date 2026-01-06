@@ -16,7 +16,7 @@ import {
   toFiniteNumber,
 } from "../lib/format.js";
 import { requestInstallLinkCode } from "../lib/vibescore-api.js";
-import { buildFleetData } from "../lib/model-breakdown.js";
+import { buildFleetData, buildTopModels } from "../lib/model-breakdown.js";
 import { safeWriteClipboard, safeWriteClipboardImage } from "../lib/safe-browser.js";
 import { useActivityHeatmap } from "../hooks/use-activity-heatmap.js";
 import { useTrendData } from "../hooks/use-trend-data.js";
@@ -35,6 +35,7 @@ import { ActivityHeatmap } from "../ui/matrix-a/components/ActivityHeatmap.jsx";
 import { BootScreen } from "../ui/matrix-a/components/BootScreen.jsx";
 import { IdentityCard } from "../ui/matrix-a/components/IdentityCard.jsx";
 import { MatrixButton } from "../ui/matrix-a/components/MatrixButton.jsx";
+import { TopModelsPanel } from "../ui/matrix-a/components/TopModelsPanel.jsx";
 import { TrendMonitor } from "../ui/matrix-a/components/TrendMonitor.jsx";
 import { UsagePanel } from "../ui/matrix-a/components/UsagePanel.jsx";
 import { NeuralDivergenceMap } from "../ui/matrix-a/components/NeuralDivergenceMap.jsx";
@@ -831,6 +832,10 @@ export function DashboardPage({
     () => buildFleetData(modelBreakdown, { copyFn: copy }),
     [modelBreakdown]
   );
+  const topModels = useMemo(
+    () => buildTopModels(modelBreakdown, { limit: 3, copyFn: copy }),
+    [modelBreakdown]
+  );
 
   const openCostModal = useCallback(() => setCostModalOpen(true), []);
   const closeCostModal = useCallback(() => setCostModalOpen(false), []);
@@ -1039,6 +1044,8 @@ export function DashboardPage({
                 scrambleDurationMs={identityScrambleDurationMs}
               />
 
+              <TopModelsPanel rows={topModels} />
+
               {!screenshotMode && !signedIn ? (
                 <AsciiBox
                   title={copy("dashboard.auth_optional.title")}
@@ -1121,7 +1128,7 @@ export function DashboardPage({
                   period={period}
                   timeZoneLabel={trendTimeZoneLabel}
                   showTimeZoneLabel={false}
-                  className="h-auto min-h-[220px]"
+                  className="h-auto min-h-[280px]"
                 />
               ) : null}
 

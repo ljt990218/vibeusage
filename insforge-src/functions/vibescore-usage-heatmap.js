@@ -7,7 +7,8 @@ const { handleOptions, json } = require('../shared/http');
 const { getBearerToken, getEdgeClientAndUserIdFast } = require('../shared/auth');
 const { getBaseUrl } = require('../shared/env');
 const { getSourceParam } = require('../shared/source');
-const { getModelParam } = require('../shared/model');
+const { getModelParam, applyUsageModelFilter, normalizeUsageModel } = require('../shared/model');
+const { resolveUsageModelsForCanonical } = require('../shared/model-identity');
 const { applyCanaryFilter } = require('../shared/canary');
 const {
   addDatePartsDays,
@@ -28,6 +29,12 @@ const { toBigInt } = require('../shared/numbers');
 const { forEachPage } = require('../shared/pagination');
 const { logSlowQuery, withRequestLogging } = require('../shared/logging');
 const { isDebugEnabled, withSlowQueryDebugPayload } = require('../shared/debug');
+const {
+  buildAliasTimeline,
+  extractDateKey,
+  fetchAliasRows,
+  resolveIdentityAtDate
+} = require('../shared/model-alias-timeline');
 const { computeBillableTotalTokens } = require('../shared/usage-billable');
 
 module.exports = withRequestLogging('vibescore-usage-heatmap', async function(request, logger) {
@@ -82,6 +89,24 @@ module.exports = withRequestLogging('vibescore-usage-heatmap', async function(re
     const endUtc = addUtcDays(end, 1);
     const endIso = endUtc.toISOString();
 
+    const modelFilter = await resolveUsageModelsForCanonical({
+      edgeClient: auth.edgeClient,
+      canonicalModel: model,
+      effectiveDate: to
+    });
+    const canonicalModel = modelFilter.canonical;
+    const usageModels = modelFilter.usageModels;
+    const hasModelFilter = Array.isArray(usageModels) && usageModels.length > 0;
+    let aliasTimeline = null;
+    if (hasModelFilter) {
+      const aliasRows = await fetchAliasRows({
+        edgeClient: auth.edgeClient,
+        usageModels,
+        effectiveDate: to
+      });
+      aliasTimeline = buildAliasTimeline({ usageModels, aliasRows });
+    }
+
     const valuesByDay = new Map();
     const queryStartMs = Date.now();
     let rowCount = 0;
@@ -92,8 +117,8 @@ module.exports = withRequestLogging('vibescore-usage-heatmap', async function(re
           .select('hour_start,source,billable_total_tokens,total_tokens,input_tokens,cached_input_tokens,output_tokens,reasoning_output_tokens')
           .eq('user_id', auth.userId);
         if (source) query = query.eq('source', source);
-        if (model) query = query.eq('model', model);
-        query = applyCanaryFilter(query, { source, model });
+        if (hasModelFilter) query = applyUsageModelFilter(query, usageModels);
+        query = applyCanaryFilter(query, { source, model: canonicalModel });
         return query
           .gte('hour_start', startIso)
           .lt('hour_start', endIso)
@@ -110,6 +135,12 @@ module.exports = withRequestLogging('vibescore-usage-heatmap', async function(re
           if (!ts) continue;
           const dt = new Date(ts);
           if (!Number.isFinite(dt.getTime())) continue;
+          if (hasModelFilter) {
+            const rawModel = normalizeUsageModel(row?.model);
+            const dateKey = extractDateKey(ts) || to;
+            const identity = resolveIdentityAtDate({ rawModel, dateKey, timeline: aliasTimeline });
+            if (identity.model_id !== canonicalModel) continue;
+          }
           const day = formatDateUTC(dt);
           const prev = valuesByDay.get(day) || 0n;
           const hasStoredBillable =
@@ -134,7 +165,7 @@ module.exports = withRequestLogging('vibescore-usage-heatmap', async function(re
       range_weeks: weeks,
       range_days: weeks * 7,
       source: source || null,
-      model: model || null,
+      model: canonicalModel || null,
       tz: tzContext?.timeZone || null,
       tz_offset_minutes: Number.isFinite(tzContext?.offsetMinutes) ? tzContext.offsetMinutes : null
     });
@@ -232,6 +263,24 @@ module.exports = withRequestLogging('vibescore-usage-heatmap', async function(re
   const auth = await getEdgeClientAndUserIdFast({ baseUrl, bearer });
   if (!auth.ok) return respond({ error: 'Unauthorized' }, 401, 0);
 
+  const modelFilter = await resolveUsageModelsForCanonical({
+    edgeClient: auth.edgeClient,
+    canonicalModel: model,
+    effectiveDate: to
+  });
+  const canonicalModel = modelFilter.canonical;
+  const usageModels = modelFilter.usageModels;
+  const hasModelFilter = Array.isArray(usageModels) && usageModels.length > 0;
+  let aliasTimeline = null;
+  if (hasModelFilter) {
+    const aliasRows = await fetchAliasRows({
+      edgeClient: auth.edgeClient,
+      usageModels,
+      effectiveDate: to
+    });
+    aliasTimeline = buildAliasTimeline({ usageModels, aliasRows });
+  }
+
   const valuesByDay = new Map();
   const queryStartMs = Date.now();
   let rowCount = 0;
@@ -242,8 +291,8 @@ module.exports = withRequestLogging('vibescore-usage-heatmap', async function(re
         .select('hour_start,source,billable_total_tokens,total_tokens,input_tokens,cached_input_tokens,output_tokens,reasoning_output_tokens')
         .eq('user_id', auth.userId);
       if (source) query = query.eq('source', source);
-      if (model) query = query.eq('model', model);
-      query = applyCanaryFilter(query, { source, model });
+      if (hasModelFilter) query = applyUsageModelFilter(query, usageModels);
+      query = applyCanaryFilter(query, { source, model: canonicalModel });
       return query
         .gte('hour_start', startIso)
         .lt('hour_start', endIso)
@@ -260,6 +309,12 @@ module.exports = withRequestLogging('vibescore-usage-heatmap', async function(re
         if (!ts) continue;
         const dt = new Date(ts);
         if (!Number.isFinite(dt.getTime())) continue;
+        if (hasModelFilter) {
+          const rawModel = row?.model;
+          const dateKey = extractDateKey(ts) || to;
+          const identity = resolveIdentityAtDate({ rawModel, dateKey, timeline: aliasTimeline });
+          if (identity.model_id !== canonicalModel) continue;
+        }
         const key = formatLocalDateKey(dt, tzContext);
         const prev = valuesByDay.get(key) || 0n;
         const hasStoredBillable =
@@ -284,7 +339,7 @@ module.exports = withRequestLogging('vibescore-usage-heatmap', async function(re
     range_weeks: weeks,
     range_days: weeks * 7,
     source: source || null,
-    model: model || null,
+    model: canonicalModel || null,
     tz: tzContext?.timeZone || null,
     tz_offset_minutes: Number.isFinite(tzContext?.offsetMinutes) ? tzContext.offsetMinutes : null
   });

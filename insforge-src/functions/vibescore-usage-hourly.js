@@ -7,7 +7,8 @@ const { handleOptions, json } = require('../shared/http');
 const { getBearerToken, getEdgeClientAndUserIdFast } = require('../shared/auth');
 const { getBaseUrl } = require('../shared/env');
 const { getSourceParam } = require('../shared/source');
-const { getModelParam } = require('../shared/model');
+const { getModelParam, applyUsageModelFilter, normalizeUsageModel } = require('../shared/model');
+const { resolveUsageModelsForCanonical } = require('../shared/model-identity');
 const { applyCanaryFilter } = require('../shared/canary');
 const {
   addDatePartsDays,
@@ -25,6 +26,12 @@ const { toBigInt } = require('../shared/numbers');
 const { forEachPage } = require('../shared/pagination');
 const { logSlowQuery, withRequestLogging } = require('../shared/logging');
 const { isDebugEnabled, withSlowQueryDebugPayload } = require('../shared/debug');
+const {
+  buildAliasTimeline,
+  extractDateKey,
+  fetchAliasRows,
+  resolveIdentityAtDate
+} = require('../shared/model-alias-timeline');
 const { computeBillableTotalTokens } = require('../shared/usage-billable');
 
 const MIN_INTERVAL_MINUTES = 30;
@@ -83,15 +90,36 @@ module.exports = withRequestLogging('vibescore-usage-hourly', async function(req
       tzContext
     });
 
-    const aggregateStartMs = Date.now();
-    const aggregateRows = await tryAggregateHourlyTotals({
+    const modelFilter = await resolveUsageModelsForCanonical({
       edgeClient: auth.edgeClient,
-      userId: auth.userId,
-      startIso,
-      endIso,
-      source,
-      model
+      canonicalModel: model,
+      effectiveDate: dayLabel
     });
+    const canonicalModel = modelFilter.canonical;
+    const usageModels = modelFilter.usageModels;
+    const hasModelFilter = Array.isArray(usageModels) && usageModels.length > 0;
+    let aliasTimeline = null;
+    if (hasModelFilter) {
+      const aliasRows = await fetchAliasRows({
+        edgeClient: auth.edgeClient,
+        usageModels,
+        effectiveDate: dayLabel
+      });
+      aliasTimeline = buildAliasTimeline({ usageModels, aliasRows });
+    }
+
+    const aggregateStartMs = Date.now();
+    const aggregateRows = hasModelFilter
+      ? null
+      : await tryAggregateHourlyTotals({
+        edgeClient: auth.edgeClient,
+        userId: auth.userId,
+        startIso,
+        endIso,
+        source,
+        canonicalModel,
+        usageModels
+      });
     const aggregateDurationMs = Date.now() - aggregateStartMs;
     logSlowQuery(logger, {
       query_label: 'usage_hourly_aggregate',
@@ -99,7 +127,7 @@ module.exports = withRequestLogging('vibescore-usage-hourly', async function(req
       row_count: Array.isArray(aggregateRows) ? aggregateRows.length : 0,
       range_days: 1,
       source: source || null,
-      model: model || null,
+      model: canonicalModel || null,
       tz: tzContext?.timeZone || null,
       tz_offset_minutes: Number.isFinite(tzContext?.offsetMinutes) ? tzContext.offsetMinutes : null,
       agg_hit: Boolean(aggregateRows)
@@ -163,8 +191,8 @@ module.exports = withRequestLogging('vibescore-usage-hourly', async function(req
           .select('hour_start,source,billable_total_tokens,total_tokens,input_tokens,cached_input_tokens,output_tokens,reasoning_output_tokens')
           .eq('user_id', auth.userId);
         if (source) query = query.eq('source', source);
-        if (model) query = query.eq('model', model);
-        query = applyCanaryFilter(query, { source, model });
+        if (hasModelFilter) query = applyUsageModelFilter(query, usageModels);
+        query = applyCanaryFilter(query, { source, model: canonicalModel });
         return query
           .gte('hour_start', startIso)
           .lt('hour_start', endIso)
@@ -178,9 +206,15 @@ module.exports = withRequestLogging('vibescore-usage-hourly', async function(req
         rowCount += pageRows.length;
         for (const row of pageRows) {
           const ts = row?.hour_start;
-          if (!ts) continue;
-          const dt = new Date(ts);
-          if (!Number.isFinite(dt.getTime())) continue;
+        if (!ts) continue;
+        const dt = new Date(ts);
+        if (!Number.isFinite(dt.getTime())) continue;
+        if (hasModelFilter) {
+          const rawModel = normalizeUsageModel(row?.model);
+          const dateKey = extractDateKey(ts) || dayLabel;
+          const identity = resolveIdentityAtDate({ rawModel, dateKey, timeline: aliasTimeline });
+          if (identity.model_id !== canonicalModel) continue;
+        }
           const hour = dt.getUTCHours();
           const minute = dt.getUTCMinutes();
           const slot = hour * 2 + (minute >= 30 ? 1 : 0);
@@ -213,7 +247,7 @@ module.exports = withRequestLogging('vibescore-usage-hourly', async function(req
       row_count: rowCount,
       range_days: 1,
       source: source || null,
-      model: model || null,
+      model: canonicalModel || null,
       tz: tzContext?.timeZone || null,
       tz_offset_minutes: Number.isFinite(tzContext?.offsetMinutes) ? tzContext.offsetMinutes : null
     });
@@ -237,6 +271,24 @@ module.exports = withRequestLogging('vibescore-usage-hourly', async function(req
   const dayKey = dayRaw || todayKey;
   const dayParts = parseDateParts(dayKey);
   if (!dayParts) return respond({ error: 'Invalid day' }, 400, 0);
+
+  const modelFilter = await resolveUsageModelsForCanonical({
+    edgeClient: auth.edgeClient,
+    canonicalModel: model,
+    effectiveDate: dayKey
+  });
+  const canonicalModel = modelFilter.canonical;
+  const usageModels = modelFilter.usageModels;
+  const hasModelFilter = Array.isArray(usageModels) && usageModels.length > 0;
+  let aliasTimeline = null;
+  if (hasModelFilter) {
+    const aliasRows = await fetchAliasRows({
+      edgeClient: auth.edgeClient,
+      usageModels,
+      effectiveDate: dayKey
+    });
+    aliasTimeline = buildAliasTimeline({ usageModels, aliasRows });
+  }
 
   const startUtc = localDatePartsToUtc({ ...dayParts, hour: 0, minute: 0, second: 0 }, tzContext);
   const endUtc = localDatePartsToUtc(addDatePartsDays(dayParts, 1), tzContext);
@@ -263,8 +315,8 @@ module.exports = withRequestLogging('vibescore-usage-hourly', async function(req
           )
           .eq('user_id', auth.userId);
         if (source) query = query.eq('source', source);
-        if (model) query = query.eq('model', model);
-        query = applyCanaryFilter(query, { source, model });
+        if (hasModelFilter) query = applyUsageModelFilter(query, usageModels);
+        query = applyCanaryFilter(query, { source, model: canonicalModel });
         return query
           .gte('hour_start', startIso)
           .lt('hour_start', endIso)
@@ -281,6 +333,12 @@ module.exports = withRequestLogging('vibescore-usage-hourly', async function(req
         if (!ts) continue;
         const dt = new Date(ts);
         if (!Number.isFinite(dt.getTime())) continue;
+        if (hasModelFilter) {
+          const rawModel = normalizeUsageModel(row?.model);
+          const dateKey = extractDateKey(ts) || dayKey;
+          const identity = resolveIdentityAtDate({ rawModel, dateKey, timeline: aliasTimeline });
+          if (identity.model_id !== canonicalModel) continue;
+        }
         const localParts = getLocalParts(dt, tzContext);
         const localDay = formatDateParts(localParts);
         if (localDay !== dayKey) continue;
@@ -317,7 +375,7 @@ module.exports = withRequestLogging('vibescore-usage-hourly', async function(req
     row_count: rowCount,
     range_days: 1,
     source: source || null,
-    model: model || null,
+    model: canonicalModel || null,
     tz: tzContext?.timeZone || null,
     tz_offset_minutes: Number.isFinite(tzContext?.offsetMinutes) ? tzContext.offsetMinutes : null
   });
@@ -414,7 +472,7 @@ function parseHalfHourSlotFromKey(key) {
   return hour * 2 + (minute >= 30 ? 1 : 0);
 }
 
-async function tryAggregateHourlyTotals({ edgeClient, userId, startIso, endIso, source, model }) {
+async function tryAggregateHourlyTotals({ edgeClient, userId, startIso, endIso, source, canonicalModel, usageModels }) {
   try {
     let query = edgeClient.database
       .from('vibescore_tracker_hourly')
@@ -423,8 +481,10 @@ async function tryAggregateHourlyTotals({ edgeClient, userId, startIso, endIso, 
       )
       .eq('user_id', userId);
     if (source) query = query.eq('source', source);
-    if (model) query = query.eq('model', model);
-    query = applyCanaryFilter(query, { source, model });
+    if (Array.isArray(usageModels) && usageModels.length > 0) {
+      query = applyUsageModelFilter(query, usageModels);
+    }
+    query = applyCanaryFilter(query, { source, model: canonicalModel });
     const { data, error } = await query
       .gte('hour_start', startIso)
       .lt('hour_start', endIso)

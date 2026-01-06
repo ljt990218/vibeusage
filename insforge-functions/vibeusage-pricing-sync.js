@@ -555,6 +555,41 @@ var require_model = __commonJS({
       const trimmed = value.trim();
       return trimmed.length > 0 ? trimmed : null;
     }
+    function normalizeUsageModel(value) {
+      const normalized = normalizeModel(value);
+      if (!normalized) return null;
+      const lowered = normalized.toLowerCase();
+      if (!lowered) return null;
+      const slashIndex = lowered.lastIndexOf("/");
+      const candidate = slashIndex >= 0 ? lowered.slice(slashIndex + 1) : lowered;
+      return candidate ? candidate : null;
+    }
+    function escapeLike(value) {
+      return String(value).replace(/[\\%_]/g, "\\$&");
+    }
+    function applyUsageModelFilter(query, usageModels) {
+      if (!query || typeof query.or !== "function") return query;
+      const models = Array.isArray(usageModels) ? usageModels : [];
+      const terms = [];
+      const seen = /* @__PURE__ */ new Set();
+      for (const model of models) {
+        const normalized = normalizeUsageModel(model);
+        if (!normalized) continue;
+        const safe = escapeLike(normalized);
+        const exact = `model.ilike.${safe}`;
+        const suffixed = `model.ilike.%/${safe}`;
+        if (!seen.has(exact)) {
+          seen.add(exact);
+          terms.push(exact);
+        }
+        if (!seen.has(suffixed)) {
+          seen.add(suffixed);
+          terms.push(suffixed);
+        }
+      }
+      if (terms.length === 0) return query;
+      return query.or(terms.join(","));
+    }
     function getModelParam(url) {
       if (!url || typeof url.searchParams?.get !== "function") {
         return { ok: false, error: "Invalid request URL" };
@@ -562,12 +597,14 @@ var require_model = __commonJS({
       const raw = url.searchParams.get("model");
       if (raw == null) return { ok: true, model: null };
       if (raw.trim() === "") return { ok: true, model: null };
-      const normalized = normalizeModel(raw);
+      const normalized = normalizeUsageModel(raw);
       if (!normalized) return { ok: false, error: "Invalid model" };
       return { ok: true, model: normalized };
     }
     module2.exports = {
       normalizeModel,
+      normalizeUsageModel,
+      applyUsageModelFilter,
       getModelParam
     };
   }
@@ -778,7 +815,7 @@ var require_vibescore_pricing_sync = __commonJS({
     var { formatDateUTC, isDate } = require_date();
     var { toPositiveIntOrNull } = require_numbers();
     var { normalizeSource } = require_source();
-    var { normalizeModel } = require_model();
+    var { normalizeModel, normalizeUsageModel } = require_model();
     var { applyCanaryFilter } = require_canary();
     var { forEachPage } = require_pagination();
     var { withRequestLogging } = require_logging();
@@ -978,19 +1015,12 @@ var require_vibescore_pricing_sync = __commonJS({
         onPage: (rows) => {
           for (const row of rows || []) {
             const normalized = normalizeUsageModel(row?.model);
-            if (normalized) models.add(normalized);
+            if (normalized && normalized !== "unknown") models.add(normalized);
           }
         }
       });
       if (error) throw new Error(error.message || "Failed to list usage models");
       return Array.from(models.values());
-    }
-    function normalizeUsageModel(value) {
-      const normalized = normalizeModel(value);
-      if (!normalized) return null;
-      const lowered = normalized.toLowerCase();
-      if (!lowered || lowered === "unknown") return null;
-      return lowered;
     }
     function buildAliasRows({ usageModels, pricingModelIds, pricingMeta, pricingSource, effectiveFrom }) {
       const rows = [];

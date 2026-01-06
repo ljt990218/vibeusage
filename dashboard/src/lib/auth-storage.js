@@ -10,8 +10,13 @@ function emitAuthStorageChange() {
 }
 
 function getStorage() {
-  if (typeof localStorage === "undefined") return null;
-  return localStorage;
+  if (typeof window === "undefined") return null;
+  try {
+    const storage = window.localStorage;
+    return storage || null;
+  } catch (_e) {
+    return null;
+  }
 }
 
 export function loadAuthFromStorage() {

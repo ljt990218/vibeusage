@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { logSlowQuery } = require('../insforge-src/shared/logging');
 const { getUsageMaxDays } = require('../insforge-src/shared/date');
+const { normalizeUsageModel } = require('../insforge-src/shared/model');
 const pricing = require('../insforge-src/shared/pricing');
 
 test('insforge shared logging module exists', () => {
@@ -118,4 +119,12 @@ test('pricing defaults read VIBEUSAGE env with VIBESCORE fallback', () => {
     if (prevLegacySource === undefined) delete process.env.VIBESCORE_PRICING_SOURCE;
     else process.env.VIBESCORE_PRICING_SOURCE = prevLegacySource;
   }
+});
+
+test('normalizeUsageModel canonicalizes usage model ids', () => {
+  assert.equal(normalizeUsageModel(' GPT-4o '), 'gpt-4o');
+  assert.equal(normalizeUsageModel('openai/GPT-4o'), 'gpt-4o');
+  assert.equal(normalizeUsageModel('Anthropic/Claude-3.5'), 'claude-3.5');
+  assert.equal(normalizeUsageModel('unknown'), 'unknown');
+  assert.equal(normalizeUsageModel(''), null);
 });
