@@ -7,7 +7,7 @@ const { handleOptions, json } = require('../shared/http');
 const { getBearerToken, getEdgeClientAndUserIdFast } = require('../shared/auth');
 const { getBaseUrl } = require('../shared/env');
 const { getSourceParam, normalizeSource } = require('../shared/source');
-const { getModelParam, normalizeModel } = require('../shared/model');
+const { getModelParam, normalizeUsageModel } = require('../shared/model');
 const {
   applyModelIdentity,
   normalizeUsageModelKey,
@@ -147,7 +147,7 @@ module.exports = withRequestLogging('vibescore-usage-daily', async function(requ
 
   const ingestRow = (row) => {
     if (hasModelFilter) {
-      const rawModel = normalizeModel(row?.model);
+      const rawModel = normalizeUsageModel(row?.model);
       const dateKey = extractDateKey(row?.hour_start || row?.day) || to;
       const identity = resolveIdentityAtDate({ rawModel, dateKey, timeline: aliasTimeline });
       if (identity.model_id !== canonicalModel) return;
@@ -156,8 +156,8 @@ module.exports = withRequestLogging('vibescore-usage-daily', async function(requ
     const sourceKey = normalizeSource(row?.source) || 'codex';
     const sourceEntry = getSourceEntry(sourcesMap, sourceKey);
     addRowTotals(sourceEntry.totals, row);
-    const normalizedModel = normalizeModel(row?.model);
-    if (normalizedModel && normalizedModel.toLowerCase() !== 'unknown') {
+    const normalizedModel = normalizeUsageModel(row?.model);
+    if (normalizedModel && normalizedModel !== 'unknown') {
       distinctModels.add(normalizedModel);
     }
     if (!hasModelParam && pricingBuckets) {
@@ -204,7 +204,7 @@ module.exports = withRequestLogging('vibescore-usage-daily', async function(requ
           const dt = new Date(ts);
           if (!Number.isFinite(dt.getTime())) continue;
           if (hasModelFilter) {
-            const rawModel = normalizeModel(row?.model);
+            const rawModel = normalizeUsageModel(row?.model);
             const dateKey = extractDateKey(ts) || to;
             const identity = resolveIdentityAtDate({ rawModel, dateKey, timeline: aliasTimeline });
             if (identity.model_id !== canonicalModel) continue;

@@ -210,6 +210,15 @@ var require_model = __commonJS({
       const trimmed = value.trim();
       return trimmed.length > 0 ? trimmed : null;
     }
+    function normalizeUsageModel(value) {
+      const normalized = normalizeModel(value);
+      if (!normalized) return null;
+      const lowered = normalized.toLowerCase();
+      if (!lowered) return null;
+      const slashIndex = lowered.lastIndexOf("/");
+      const candidate = slashIndex >= 0 ? lowered.slice(slashIndex + 1) : lowered;
+      return candidate ? candidate : null;
+    }
     function getModelParam(url) {
       if (!url || typeof url.searchParams?.get !== "function") {
         return { ok: false, error: "Invalid request URL" };
@@ -217,12 +226,13 @@ var require_model = __commonJS({
       const raw = url.searchParams.get("model");
       if (raw == null) return { ok: true, model: null };
       if (raw.trim() === "") return { ok: true, model: null };
-      const normalized = normalizeModel(raw);
+      const normalized = normalizeUsageModel(raw);
       if (!normalized) return { ok: false, error: "Invalid model" };
       return { ok: true, model: normalized };
     }
     module2.exports = {
       normalizeModel,
+      normalizeUsageModel,
       getModelParam
     };
   }
@@ -1252,7 +1262,7 @@ var require_vibescore_usage_model_breakdown = __commonJS({
     var { getBearerToken, getEdgeClientAndUserIdFast } = require_auth();
     var { getBaseUrl } = require_env();
     var { getSourceParam, normalizeSource } = require_source();
-    var { normalizeModel } = require_model();
+    var { normalizeUsageModel } = require_model();
     var { normalizeUsageModelKey } = require_model_identity();
     var {
       buildAliasTimeline,
@@ -1336,7 +1346,7 @@ var require_vibescore_usage_model_breakdown = __commonJS({
           rowCount += pageRows.length;
           for (const row of pageRows) {
             const source = normalizeSource(row?.source) || DEFAULT_SOURCE;
-            const model = normalizeModel(row?.model) || DEFAULT_MODEL;
+            const model = normalizeUsageModel(row?.model) || DEFAULT_MODEL;
             const usageKey = normalizeUsageModelKey(model);
             rowsBuffer.push({
               source,

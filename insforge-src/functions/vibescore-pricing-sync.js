@@ -10,7 +10,7 @@ const { getAnonKey, getBaseUrl, getServiceRoleKey } = require('../shared/env');
 const { formatDateUTC, isDate } = require('../shared/date');
 const { toPositiveIntOrNull } = require('../shared/numbers');
 const { normalizeSource } = require('../shared/source');
-const { normalizeModel } = require('../shared/model');
+const { normalizeModel, normalizeUsageModel } = require('../shared/model');
 const { applyCanaryFilter } = require('../shared/canary');
 const { forEachPage } = require('../shared/pagination');
 const { withRequestLogging } = require('../shared/logging');
@@ -277,21 +277,13 @@ async function listUsageModels({ serviceClient, windowDays }) {
     onPage: (rows) => {
       for (const row of rows || []) {
         const normalized = normalizeUsageModel(row?.model);
-        if (normalized) models.add(normalized);
+        if (normalized && normalized !== 'unknown') models.add(normalized);
       }
     }
   });
 
   if (error) throw new Error(error.message || 'Failed to list usage models');
   return Array.from(models.values());
-}
-
-function normalizeUsageModel(value) {
-  const normalized = normalizeModel(value);
-  if (!normalized) return null;
-  const lowered = normalized.toLowerCase();
-  if (!lowered || lowered === 'unknown') return null;
-  return lowered;
 }
 
 function buildAliasRows({ usageModels, pricingModelIds, pricingMeta, pricingSource, effectiveFrom }) {

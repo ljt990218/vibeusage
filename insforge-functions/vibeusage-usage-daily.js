@@ -210,6 +210,15 @@ var require_model = __commonJS({
       const trimmed = value.trim();
       return trimmed.length > 0 ? trimmed : null;
     }
+    function normalizeUsageModel(value) {
+      const normalized = normalizeModel(value);
+      if (!normalized) return null;
+      const lowered = normalized.toLowerCase();
+      if (!lowered) return null;
+      const slashIndex = lowered.lastIndexOf("/");
+      const candidate = slashIndex >= 0 ? lowered.slice(slashIndex + 1) : lowered;
+      return candidate ? candidate : null;
+    }
     function getModelParam(url) {
       if (!url || typeof url.searchParams?.get !== "function") {
         return { ok: false, error: "Invalid request URL" };
@@ -217,12 +226,13 @@ var require_model = __commonJS({
       const raw = url.searchParams.get("model");
       if (raw == null) return { ok: true, model: null };
       if (raw.trim() === "") return { ok: true, model: null };
-      const normalized = normalizeModel(raw);
+      const normalized = normalizeUsageModel(raw);
       if (!normalized) return { ok: false, error: "Invalid model" };
       return { ok: true, model: normalized };
     }
     module2.exports = {
       normalizeModel,
+      normalizeUsageModel,
       getModelParam
     };
   }
@@ -1314,7 +1324,7 @@ var require_vibescore_usage_daily = __commonJS({
     var { getBearerToken, getEdgeClientAndUserIdFast } = require_auth();
     var { getBaseUrl } = require_env();
     var { getSourceParam, normalizeSource } = require_source();
-    var { getModelParam, normalizeModel } = require_model();
+    var { getModelParam, normalizeUsageModel } = require_model();
     var {
       applyModelIdentity,
       normalizeUsageModelKey,
@@ -1440,7 +1450,7 @@ var require_vibescore_usage_daily = __commonJS({
       };
       const ingestRow = (row) => {
         if (hasModelFilter) {
-          const rawModel = normalizeModel(row?.model);
+          const rawModel = normalizeUsageModel(row?.model);
           const dateKey = extractDateKey(row?.hour_start || row?.day) || to;
           const identity = resolveIdentityAtDate({ rawModel, dateKey, timeline: aliasTimeline });
           if (identity.model_id !== canonicalModel) return;
@@ -1449,8 +1459,8 @@ var require_vibescore_usage_daily = __commonJS({
         const sourceKey = normalizeSource(row?.source) || "codex";
         const sourceEntry = getSourceEntry(sourcesMap, sourceKey);
         addRowTotals(sourceEntry.totals, row);
-        const normalizedModel = normalizeModel(row?.model);
-        if (normalizedModel && normalizedModel.toLowerCase() !== "unknown") {
+        const normalizedModel = normalizeUsageModel(row?.model);
+        if (normalizedModel && normalizedModel !== "unknown") {
           distinctModels.add(normalizedModel);
         }
         if (!hasModelParam && pricingBuckets) {
@@ -1486,7 +1496,7 @@ var require_vibescore_usage_daily = __commonJS({
               const dt = new Date(ts);
               if (!Number.isFinite(dt.getTime())) continue;
               if (hasModelFilter) {
-                const rawModel = normalizeModel(row?.model);
+                const rawModel = normalizeUsageModel(row?.model);
                 const dateKey = extractDateKey(ts) || to;
                 const identity = resolveIdentityAtDate({ rawModel, dateKey, timeline: aliasTimeline });
                 if (identity.model_id !== canonicalModel) continue;

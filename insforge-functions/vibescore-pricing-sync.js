@@ -555,6 +555,15 @@ var require_model = __commonJS({
       const trimmed = value.trim();
       return trimmed.length > 0 ? trimmed : null;
     }
+    function normalizeUsageModel2(value) {
+      const normalized = normalizeModel2(value);
+      if (!normalized) return null;
+      const lowered = normalized.toLowerCase();
+      if (!lowered) return null;
+      const slashIndex = lowered.lastIndexOf("/");
+      const candidate = slashIndex >= 0 ? lowered.slice(slashIndex + 1) : lowered;
+      return candidate ? candidate : null;
+    }
     function getModelParam(url) {
       if (!url || typeof url.searchParams?.get !== "function") {
         return { ok: false, error: "Invalid request URL" };
@@ -562,12 +571,13 @@ var require_model = __commonJS({
       const raw = url.searchParams.get("model");
       if (raw == null) return { ok: true, model: null };
       if (raw.trim() === "") return { ok: true, model: null };
-      const normalized = normalizeModel2(raw);
+      const normalized = normalizeUsageModel2(raw);
       if (!normalized) return { ok: false, error: "Invalid model" };
       return { ok: true, model: normalized };
     }
     module2.exports = {
       normalizeModel: normalizeModel2,
+      normalizeUsageModel: normalizeUsageModel2,
       getModelParam
     };
   }
@@ -775,7 +785,7 @@ var { getAnonKey, getBaseUrl, getServiceRoleKey } = require_env();
 var { formatDateUTC, isDate } = require_date();
 var { toPositiveIntOrNull } = require_numbers();
 var { normalizeSource } = require_source();
-var { normalizeModel } = require_model();
+var { normalizeModel, normalizeUsageModel } = require_model();
 var { applyCanaryFilter } = require_canary();
 var { forEachPage } = require_pagination();
 var { withRequestLogging } = require_logging();
@@ -975,19 +985,12 @@ async function listUsageModels({ serviceClient, windowDays }) {
     onPage: (rows) => {
       for (const row of rows || []) {
         const normalized = normalizeUsageModel(row?.model);
-        if (normalized) models.add(normalized);
+        if (normalized && normalized !== "unknown") models.add(normalized);
       }
     }
   });
   if (error) throw new Error(error.message || "Failed to list usage models");
   return Array.from(models.values());
-}
-function normalizeUsageModel(value) {
-  const normalized = normalizeModel(value);
-  if (!normalized) return null;
-  const lowered = normalized.toLowerCase();
-  if (!lowered || lowered === "unknown") return null;
-  return lowered;
 }
 function buildAliasRows({ usageModels, pricingModelIds, pricingMeta, pricingSource, effectiveFrom }) {
   const rows = [];

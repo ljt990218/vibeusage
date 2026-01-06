@@ -205,10 +205,19 @@ var require_source = __commonJS({
 var require_model = __commonJS({
   "insforge-src/shared/model.js"(exports2, module2) {
     "use strict";
-    function normalizeModel2(value) {
+    function normalizeModel(value) {
       if (typeof value !== "string") return null;
       const trimmed = value.trim();
       return trimmed.length > 0 ? trimmed : null;
+    }
+    function normalizeUsageModel2(value) {
+      const normalized = normalizeModel(value);
+      if (!normalized) return null;
+      const lowered = normalized.toLowerCase();
+      if (!lowered) return null;
+      const slashIndex = lowered.lastIndexOf("/");
+      const candidate = slashIndex >= 0 ? lowered.slice(slashIndex + 1) : lowered;
+      return candidate ? candidate : null;
     }
     function getModelParam2(url) {
       if (!url || typeof url.searchParams?.get !== "function") {
@@ -217,12 +226,13 @@ var require_model = __commonJS({
       const raw = url.searchParams.get("model");
       if (raw == null) return { ok: true, model: null };
       if (raw.trim() === "") return { ok: true, model: null };
-      const normalized = normalizeModel2(raw);
+      const normalized = normalizeUsageModel2(raw);
       if (!normalized) return { ok: false, error: "Invalid model" };
       return { ok: true, model: normalized };
     }
     module2.exports = {
-      normalizeModel: normalizeModel2,
+      normalizeModel,
+      normalizeUsageModel: normalizeUsageModel2,
       getModelParam: getModelParam2
     };
   }
@@ -829,7 +839,7 @@ var require_pricing = __commonJS({
   "insforge-src/shared/pricing.js"(exports2, module2) {
     "use strict";
     var { toBigInt } = require_numbers();
-    var { normalizeModel: normalizeModel2 } = require_model();
+    var { normalizeModel } = require_model();
     var TOKENS_PER_MILLION = 1000000n;
     var MICROS_PER_DOLLAR = 1000000n;
     var DEFAULT_PROFILE = {
@@ -869,7 +879,7 @@ var require_pricing = __commonJS({
       return trimmed.length > 0 ? trimmed : null;
     }
     function normalizeModelValue(value) {
-      const normalized = normalizeModel2(value);
+      const normalized = normalizeModel(value);
       if (!normalized || normalized.toLowerCase() === "unknown") return null;
       return normalized;
     }
@@ -1220,7 +1230,7 @@ var require_debug = __commonJS({
 var require_model_alias_timeline = __commonJS({
   "insforge-src/shared/model-alias-timeline.js"(exports2, module2) {
     "use strict";
-    var { normalizeModel: normalizeModel2 } = require_model();
+    var { normalizeModel } = require_model();
     var { normalizeUsageModelKey: normalizeUsageModelKey2 } = require_model_identity();
     var DEFAULT_MODEL2 = "unknown";
     function extractDateKey2(value) {
@@ -1252,7 +1262,7 @@ var require_model_alias_timeline = __commonJS({
           return { model_id: match.model_id, model: match.model };
         }
       }
-      const display = normalizeModel2(rawModel) || DEFAULT_MODEL2;
+      const display = normalizeModel(rawModel) || DEFAULT_MODEL2;
       return { model_id: normalized, model: display };
     }
     function buildAliasTimeline2({ usageModels, aliasRows } = {}) {
@@ -1266,7 +1276,7 @@ var require_model_alias_timeline = __commonJS({
         const canonical = normalizeUsageModelKey2(row?.canonical_model);
         if (!usageKey || !canonical) continue;
         if (normalized.size && !normalized.has(usageKey)) continue;
-        const display = normalizeModel2(row?.display_name) || canonical;
+        const display = normalizeModel(row?.display_name) || canonical;
         const effective = extractDateKey2(row?.effective_from || "");
         if (!effective) continue;
         const entry = {
@@ -1311,7 +1321,7 @@ var { handleOptions, json } = require_http();
 var { getBearerToken, getEdgeClientAndUserIdFast } = require_auth();
 var { getBaseUrl } = require_env();
 var { getSourceParam, normalizeSource } = require_source();
-var { getModelParam, normalizeModel } = require_model();
+var { getModelParam, normalizeUsageModel } = require_model();
 var {
   applyModelIdentity,
   resolveModelIdentity,
@@ -1429,7 +1439,7 @@ module.exports = withRequestLogging("vibescore-usage-summary", async function(re
   };
   const shouldIncludeRow = (row) => {
     if (!hasModelFilter) return true;
-    const rawModel = normalizeModel(row?.model);
+    const rawModel = normalizeUsageModel(row?.model);
     const usageKey = normalizeUsageModelKey(rawModel);
     const dateKey = extractDateKey(row?.hour_start || row?.day) || to;
     const identity = resolveIdentityAtDate({
@@ -1446,8 +1456,8 @@ module.exports = withRequestLogging("vibescore-usage-summary", async function(re
     const sourceKey = normalizeSource(row?.source) || DEFAULT_SOURCE;
     const sourceEntry = getSourceEntry(sourcesMap, sourceKey);
     addRowTotals(sourceEntry.totals, row);
-    const normalizedModel = normalizeModel(row?.model);
-    if (normalizedModel && normalizedModel.toLowerCase() !== "unknown") {
+    const normalizedModel = normalizeUsageModel(row?.model);
+    if (normalizedModel && normalizedModel !== "unknown") {
       distinctModels.add(normalizedModel);
     }
     if (!hasModelParam && pricingBuckets) {

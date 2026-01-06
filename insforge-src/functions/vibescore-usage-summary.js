@@ -7,7 +7,7 @@ const { handleOptions, json } = require('../shared/http');
 const { getBearerToken, getEdgeClientAndUserIdFast } = require('../shared/auth');
 const { getBaseUrl } = require('../shared/env');
 const { getSourceParam, normalizeSource } = require('../shared/source');
-const { getModelParam, normalizeModel } = require('../shared/model');
+const { getModelParam, normalizeUsageModel } = require('../shared/model');
 const {
   applyModelIdentity,
   resolveModelIdentity,
@@ -139,7 +139,7 @@ module.exports = withRequestLogging('vibescore-usage-summary', async function(re
 
   const shouldIncludeRow = (row) => {
     if (!hasModelFilter) return true;
-    const rawModel = normalizeModel(row?.model);
+    const rawModel = normalizeUsageModel(row?.model);
     const usageKey = normalizeUsageModelKey(rawModel);
     const dateKey = extractDateKey(row?.hour_start || row?.day) || to;
     const identity = resolveIdentityAtDate({
@@ -157,8 +157,8 @@ module.exports = withRequestLogging('vibescore-usage-summary', async function(re
     const sourceKey = normalizeSource(row?.source) || DEFAULT_SOURCE;
     const sourceEntry = getSourceEntry(sourcesMap, sourceKey);
     addRowTotals(sourceEntry.totals, row);
-    const normalizedModel = normalizeModel(row?.model);
-    if (normalizedModel && normalizedModel.toLowerCase() !== 'unknown') {
+    const normalizedModel = normalizeUsageModel(row?.model);
+    if (normalizedModel && normalizedModel !== 'unknown') {
       distinctModels.add(normalizedModel);
     }
     if (!hasModelParam && pricingBuckets) {

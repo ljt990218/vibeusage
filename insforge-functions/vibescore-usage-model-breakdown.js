@@ -205,10 +205,19 @@ var require_source = __commonJS({
 var require_model = __commonJS({
   "insforge-src/shared/model.js"(exports2, module2) {
     "use strict";
-    function normalizeModel2(value) {
+    function normalizeModel(value) {
       if (typeof value !== "string") return null;
       const trimmed = value.trim();
       return trimmed.length > 0 ? trimmed : null;
+    }
+    function normalizeUsageModel2(value) {
+      const normalized = normalizeModel(value);
+      if (!normalized) return null;
+      const lowered = normalized.toLowerCase();
+      if (!lowered) return null;
+      const slashIndex = lowered.lastIndexOf("/");
+      const candidate = slashIndex >= 0 ? lowered.slice(slashIndex + 1) : lowered;
+      return candidate ? candidate : null;
     }
     function getModelParam(url) {
       if (!url || typeof url.searchParams?.get !== "function") {
@@ -217,12 +226,13 @@ var require_model = __commonJS({
       const raw = url.searchParams.get("model");
       if (raw == null) return { ok: true, model: null };
       if (raw.trim() === "") return { ok: true, model: null };
-      const normalized = normalizeModel2(raw);
+      const normalized = normalizeUsageModel2(raw);
       if (!normalized) return { ok: false, error: "Invalid model" };
       return { ok: true, model: normalized };
     }
     module2.exports = {
-      normalizeModel: normalizeModel2,
+      normalizeModel,
+      normalizeUsageModel: normalizeUsageModel2,
       getModelParam
     };
   }
@@ -360,7 +370,7 @@ var require_model_identity = __commonJS({
 var require_model_alias_timeline = __commonJS({
   "insforge-src/shared/model-alias-timeline.js"(exports2, module2) {
     "use strict";
-    var { normalizeModel: normalizeModel2 } = require_model();
+    var { normalizeModel } = require_model();
     var { normalizeUsageModelKey: normalizeUsageModelKey2 } = require_model_identity();
     var DEFAULT_MODEL2 = "unknown";
     function extractDateKey2(value) {
@@ -392,7 +402,7 @@ var require_model_alias_timeline = __commonJS({
           return { model_id: match.model_id, model: match.model };
         }
       }
-      const display = normalizeModel2(rawModel) || DEFAULT_MODEL2;
+      const display = normalizeModel(rawModel) || DEFAULT_MODEL2;
       return { model_id: normalized, model: display };
     }
     function buildAliasTimeline2({ usageModels, aliasRows } = {}) {
@@ -406,7 +416,7 @@ var require_model_alias_timeline = __commonJS({
         const canonical = normalizeUsageModelKey2(row?.canonical_model);
         if (!usageKey || !canonical) continue;
         if (normalized.size && !normalized.has(usageKey)) continue;
-        const display = normalizeModel2(row?.display_name) || canonical;
+        const display = normalizeModel(row?.display_name) || canonical;
         const effective = extractDateKey2(row?.effective_from || "");
         if (!effective) continue;
         const entry = {
@@ -857,7 +867,7 @@ var require_pricing = __commonJS({
   "insforge-src/shared/pricing.js"(exports2, module2) {
     "use strict";
     var { toBigInt: toBigInt2 } = require_numbers();
-    var { normalizeModel: normalizeModel2 } = require_model();
+    var { normalizeModel } = require_model();
     var TOKENS_PER_MILLION = 1000000n;
     var MICROS_PER_DOLLAR = 1000000n;
     var DEFAULT_PROFILE = {
@@ -897,7 +907,7 @@ var require_pricing = __commonJS({
       return trimmed.length > 0 ? trimmed : null;
     }
     function normalizeModelValue(value) {
-      const normalized = normalizeModel2(value);
+      const normalized = normalizeModel(value);
       if (!normalized || normalized.toLowerCase() === "unknown") return null;
       return normalized;
     }
@@ -1249,7 +1259,7 @@ var { handleOptions, json } = require_http();
 var { getBearerToken, getEdgeClientAndUserIdFast } = require_auth();
 var { getBaseUrl } = require_env();
 var { getSourceParam, normalizeSource } = require_source();
-var { normalizeModel } = require_model();
+var { normalizeUsageModel } = require_model();
 var { normalizeUsageModelKey } = require_model_identity();
 var {
   buildAliasTimeline,
@@ -1333,7 +1343,7 @@ module.exports = withRequestLogging("vibescore-usage-model-breakdown", async fun
       rowCount += pageRows.length;
       for (const row of pageRows) {
         const source = normalizeSource(row?.source) || DEFAULT_SOURCE;
-        const model = normalizeModel(row?.model) || DEFAULT_MODEL;
+        const model = normalizeUsageModel(row?.model) || DEFAULT_MODEL;
         const usageKey = normalizeUsageModelKey(model);
         rowsBuffer.push({
           source,

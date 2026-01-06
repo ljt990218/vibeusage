@@ -7,7 +7,7 @@ const { handleOptions, json } = require('../shared/http');
 const { getBearerToken, getEdgeClientAndUserIdFast } = require('../shared/auth');
 const { getBaseUrl } = require('../shared/env');
 const { getSourceParam, normalizeSource } = require('../shared/source');
-const { normalizeModel } = require('../shared/model');
+const { normalizeUsageModel } = require('../shared/model');
 const { normalizeUsageModelKey } = require('../shared/model-identity');
 const {
   buildAliasTimeline,
@@ -112,7 +112,7 @@ module.exports = withRequestLogging('vibescore-usage-model-breakdown', async fun
       rowCount += pageRows.length;
       for (const row of pageRows) {
         const source = normalizeSource(row?.source) || DEFAULT_SOURCE;
-        const model = normalizeModel(row?.model) || DEFAULT_MODEL;
+        const model = normalizeUsageModel(row?.model) || DEFAULT_MODEL;
         const usageKey = normalizeUsageModelKey(model);
         rowsBuffer.push({
           source,

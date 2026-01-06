@@ -441,10 +441,19 @@ var require_source = __commonJS({
 var require_model = __commonJS({
   "insforge-src/shared/model.js"(exports2, module2) {
     "use strict";
-    function normalizeModel2(value) {
+    function normalizeModel(value) {
       if (typeof value !== "string") return null;
       const trimmed = value.trim();
       return trimmed.length > 0 ? trimmed : null;
+    }
+    function normalizeUsageModel2(value) {
+      const normalized = normalizeModel(value);
+      if (!normalized) return null;
+      const lowered = normalized.toLowerCase();
+      if (!lowered) return null;
+      const slashIndex = lowered.lastIndexOf("/");
+      const candidate = slashIndex >= 0 ? lowered.slice(slashIndex + 1) : lowered;
+      return candidate ? candidate : null;
     }
     function getModelParam(url) {
       if (!url || typeof url.searchParams?.get !== "function") {
@@ -453,12 +462,13 @@ var require_model = __commonJS({
       const raw = url.searchParams.get("model");
       if (raw == null) return { ok: true, model: null };
       if (raw.trim() === "") return { ok: true, model: null };
-      const normalized = normalizeModel2(raw);
+      const normalized = normalizeUsageModel2(raw);
       if (!normalized) return { ok: false, error: "Invalid model" };
       return { ok: true, model: normalized };
     }
     module2.exports = {
-      normalizeModel: normalizeModel2,
+      normalizeModel,
+      normalizeUsageModel: normalizeUsageModel2,
       getModelParam
     };
   }
@@ -472,7 +482,7 @@ var { getBearerToken } = require_auth();
 var { getAnonKey, getBaseUrl, getServiceRoleKey } = require_env();
 var { sha256Hex } = require_crypto();
 var { normalizeSource } = require_source();
-var { normalizeModel } = require_model();
+var { normalizeUsageModel } = require_model();
 var MAX_BUCKETS = 500;
 var DEFAULT_MODEL = "unknown";
 var ingestGuard = createConcurrencyGuard({
@@ -852,7 +862,7 @@ function parseHourlyBucket(raw) {
     return { ok: false, error: "hour_start must be an ISO timestamp at UTC half-hour boundary" };
   }
   const source = normalizeSource(raw.source);
-  const model = normalizeModel(raw.model) || DEFAULT_MODEL;
+  const model = normalizeUsageModel(raw.model) || DEFAULT_MODEL;
   const input = toNonNegativeInt(raw.input_tokens);
   const cached = toNonNegativeInt(raw.cached_input_tokens);
   const output = toNonNegativeInt(raw.output_tokens);
