@@ -577,10 +577,16 @@ export function DashboardPage({
   );
   const publicViewInvalid = useMemo(() => {
     if (!publicMode || !usageError) return false;
-    const status = usageError?.status ?? usageError?.statusCode;
+    const status =
+      typeof usageError === "object" && usageError
+        ? usageError?.status ?? usageError?.statusCode
+        : null;
     if (status === 401) return true;
-    const message = String(usageError?.message || "");
-    return /unauthorized|invalid|token|revoked/i.test(message);
+    const message =
+      typeof usageError === "string"
+        ? usageError
+        : String(usageError?.message || usageError || "");
+    return /unauthorized|invalid|token|revoked|401/i.test(message);
   }, [publicMode, usageError]);
   const identityLabel = useMemo(() => {
     const raw = auth?.name?.trim();
