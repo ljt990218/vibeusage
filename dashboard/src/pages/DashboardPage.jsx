@@ -16,6 +16,7 @@ import {
   toFiniteNumber,
 } from "../lib/format.js";
 import {
+  getPublicViewProfile,
   getPublicViewStatus,
   issuePublicViewToken,
   requestInstallLinkCode,
@@ -125,6 +126,7 @@ export function DashboardPage({
   const [publicViewLoading, setPublicViewLoading] = useState(false);
   const [publicViewActionLoading, setPublicViewActionLoading] = useState(false);
   const [publicViewCopied, setPublicViewCopied] = useState(false);
+  const [publicProfileName, setPublicProfileName] = useState(null);
   const [compactSummary, setCompactSummary] = useState(() => {
     if (typeof window === "undefined" || !window.matchMedia) return false;
     return window.matchMedia("(max-width: 640px)").matches;
@@ -219,6 +221,32 @@ export function DashboardPage({
       active = false;
     };
   }, [baseUrl, mockEnabled, signedIn, publicMode, auth?.accessToken]);
+
+  useEffect(() => {
+    if (!publicMode) {
+      setPublicProfileName(null);
+      return;
+    }
+    if (!publicToken) {
+      setPublicProfileName(null);
+      return;
+    }
+    let active = true;
+    getPublicViewProfile({ baseUrl, accessToken: publicToken })
+      .then((data) => {
+        if (!active) return;
+        setPublicProfileName(
+          typeof data?.display_name === "string" ? data.display_name : null
+        );
+      })
+      .catch(() => {
+        if (!active) return;
+        setPublicProfileName(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [baseUrl, publicMode, publicToken]);
 
   const linkCodeExpired = useMemo(() => {
     if (!linkCodeExpiresAt) return false;
@@ -589,9 +617,14 @@ export function DashboardPage({
     return /unauthorized|invalid|token|revoked|401/i.test(message);
   }, [publicMode, usageError]);
   const identityRawName = useMemo(() => {
+    if (publicMode) {
+      if (typeof publicProfileName === "string") return publicProfileName.trim();
+      if (typeof auth?.name === "string") return auth.name.trim();
+      return "";
+    }
     if (typeof auth?.name !== "string") return "";
     return auth.name.trim();
-  }, [auth?.name]);
+  }, [auth?.name, publicMode, publicProfileName]);
 
   const identityLabel = useMemo(() => {
     if (!identityRawName || identityRawName.includes("@")) {

@@ -70,6 +70,13 @@ test("public view edge functions are defined", () => {
   assert.match(revokeSrc, /public view/i);
 });
 
+test("public view profile edge function is defined", () => {
+  const profileSrc = read(
+    "insforge-src/functions/vibescore-public-view-profile.js"
+  );
+  assert.match(profileSrc, /public[- ]view[- ]profile/i);
+});
+
 test("public view panel does not render share link text", () => {
   const src = read("dashboard/src/pages/DashboardPage.jsx");
   assert.doesNotMatch(
@@ -111,7 +118,13 @@ test("public view uses raw identity name", () => {
   );
   assert.ok(block, "identity display block not found");
   assert.match(block, /publicMode/);
-  assert.match(block, /auth\?\.name/);
+  assert.match(block, /publicProfileName/);
+});
+
+test("public view fetches profile display name", () => {
+  const src = read("dashboard/src/pages/DashboardPage.jsx");
+  assert.match(src, /getPublicViewProfile/);
+  assert.match(src, /publicProfileName/);
 });
 
 test("public view copy issues a token when missing", () => {
