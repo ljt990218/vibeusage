@@ -107,6 +107,11 @@ test("public view panel does not render share link text", () => {
   assert.doesNotMatch(src, /publicViewSubtitle/);
 });
 
+test("public view hides upgrade banner", () => {
+  const src = read("dashboard/src/App.jsx");
+  assert.match(src, /\{\s*!publicMode\s*\?\s*<UpgradeAlertModal/);
+});
+
 test("public share header shows login entry", () => {
   const src = read("dashboard/src/pages/DashboardPage.jsx");
   assert.match(src, /landing\.nav\.login/);
