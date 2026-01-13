@@ -58,6 +58,11 @@ test("share routes rewrite to share.html", () => {
   assert.ok(hasShare);
 });
 
+test("share html includes app entry script", () => {
+  const src = read("dashboard/share.html");
+  assert.match(src, /<script\s+type="module"\s+src="\/src\/main\.jsx"><\/script>/);
+});
+
 test("public view edge functions are defined", () => {
   const issueSrc = read("insforge-src/functions/vibescore-public-view-issue.js");
   const revokeSrc = read("insforge-src/functions/vibescore-public-view-revoke.js");
