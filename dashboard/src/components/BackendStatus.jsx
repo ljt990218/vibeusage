@@ -8,7 +8,6 @@ export function BackendStatus({
   accessToken,
   statusOverride,
   titleOverride,
-  onRefresh,
 }) {
   const { status, checking, httpStatus, lastCheckedAt, lastOkAt, error, refresh } =
     useBackendStatus({ baseUrl, accessToken });
@@ -30,18 +29,24 @@ export function BackendStatus({
       lastOkAt ? `${copy("backend.meta.ok_label")}=${lastOkAt}` : null,
       httpStatus != null ? `${copy("backend.meta.http_label")}=${httpStatus}` : null,
       error ? `${copy("backend.meta.error_label")}=${error}` : null,
-      copy("backend.meta.click_refresh"),
     ]
       .filter(Boolean)
       .join(" • ");
 
     return meta;
-  }, [error, host, httpStatus, lastCheckedAt, lastOkAt, status, titleOverride]);
+  }, [
+    error,
+    host,
+    httpStatus,
+    lastCheckedAt,
+    lastOkAt,
+    status,
+    titleOverride,
+  ]);
 
   return (
     <ConnectionStatus
       status={uiStatus}
-      onClick={onRefresh || refresh}
       title={title}
       className={checking ? "opacity-80" : ""}
     />

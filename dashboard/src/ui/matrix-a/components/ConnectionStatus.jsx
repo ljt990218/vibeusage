@@ -49,6 +49,9 @@ export function ConnectionStatus({
 
   const current = configs[status] || configs.STABLE;
   const Comp = onClick ? "button" : "div";
+  const actionClass = onClick
+    ? "matrix-header-action hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-matrix-primary/30"
+    : "cursor-default";
 
   return (
     <Comp
@@ -56,10 +59,8 @@ export function ConnectionStatus({
       onClick={onClick}
       title={title}
       className={[
-        "matrix-header-chip matrix-header-action font-matrix transition-all duration-700",
-        onClick
-          ? "hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-matrix-primary/30"
-          : null,
+        "matrix-header-chip font-matrix transition-all duration-700",
+        actionClass,
         current.color,
         className,
       ]

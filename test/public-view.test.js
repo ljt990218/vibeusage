@@ -84,6 +84,19 @@ test("public share header shows login entry", () => {
   assert.match(src, /landing\.nav\.login/);
 });
 
+test("backend status does not expose refresh click", () => {
+  const src = read("dashboard/src/components/BackendStatus.jsx");
+  assert.doesNotMatch(src, /onClick=/);
+  assert.doesNotMatch(src, /backend\.meta\.click_refresh/);
+});
+
+test("connection status only uses action styling when clickable", () => {
+  const src = read("dashboard/src/ui/matrix-a/components/ConnectionStatus.jsx");
+  assert.match(src, /onClick\s*\?\s*"button"\s*:\s*"div"/);
+  assert.match(src, /onClick\s*\?\s*"matrix-header-action/);
+  assert.doesNotMatch(src, /matrix-header-chip matrix-header-action/);
+});
+
 test("public view invalid check handles string errors", () => {
   const src = read("dashboard/src/pages/DashboardPage.jsx");
   assert.match(src, /usageError\?\.message\s*\|\|\s*usageError/);

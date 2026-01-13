@@ -1052,6 +1052,10 @@ export function DashboardPage({
     return [parts[0], parts.slice(1).join("{{cmd}}")];
   }, [dailyEmptyTemplate]);
 
+  const headerStatus = (
+    <BackendStatus baseUrl={baseUrl} accessToken={accessToken} />
+  );
+
   const headerRight = (
     <div className="flex items-center gap-4">
       <GithubStar isFixed={false} size="header" />
@@ -1089,12 +1093,7 @@ export function DashboardPage({
     <>
       <MatrixShell
         hideHeader={screenshotMode}
-        headerStatus={
-          <BackendStatus
-            baseUrl={baseUrl}
-            accessToken={accessToken}
-          />
-        }
+        headerStatus={headerStatus}
         headerRight={headerRight}
         footerLeft={
           footerLeftContent ? <span>{footerLeftContent}</span> : null
