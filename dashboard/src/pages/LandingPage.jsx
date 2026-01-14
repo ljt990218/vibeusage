@@ -159,7 +159,7 @@ export function LandingPage({ signInUrl, signUpUrl }) {
         <section className="w-full max-w-4xl border border-matrix-ghost bg-matrix-panel p-4">
           <div className="relative overflow-hidden border border-matrix-dim bg-black/60 shadow-[0_0_30px_rgba(0,255,65,0.15)]">
             <img
-              src="/vibe-score-link.png"
+              src="/landing-dashboard.jpg"
               alt={copy("landing.screenshot.alt")}
               className="block w-full h-auto"
               loading="lazy"
