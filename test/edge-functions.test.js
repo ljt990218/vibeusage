@@ -1,6 +1,10 @@
 const assert = require('node:assert/strict');
-const { createHash } = require('node:crypto');
+const { createHash, webcrypto } = require('node:crypto');
 const { test, beforeEach, afterEach } = require('node:test');
+
+if (!globalThis.crypto) {
+  globalThis.crypto = webcrypto;
+}
 
 const SERVICE_ROLE_KEY = 'srk_test_123';
 const ANON_KEY = 'anon_test_123';
