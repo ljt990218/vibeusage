@@ -1,12 +1,16 @@
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 
+import { useAuth as useInsforgeAuth } from "@insforge/react-router";
+
 import { getInsforgeBaseUrl } from "./lib/config.js";
-import { useAuth } from "./hooks/use-auth.js";
 import { buildAuthUrl } from "./lib/auth-url.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
 import { LandingPage } from "./pages/LandingPage.jsx";
 import { isMockEnabled } from "./lib/mock-data.js";
 import { fetchLatestTrackerVersion } from "./lib/npm-version.js";
+import { clearSessionExpired } from "./lib/auth-storage.js";
+import { insforgeAuthClient } from "./lib/insforge-auth-client.js";
+import { useAuth as useLegacyAuth } from "./hooks/use-auth.js";
 
 import { UpgradeAlertModal } from "./ui/matrix-a/components/UpgradeAlertModal.jsx";
 
@@ -34,9 +38,20 @@ function getSafeRedirect(searchParams) {
 
 export default function App() {
   const baseUrl = useMemo(() => getInsforgeBaseUrl(), []);
-  const { auth, signedIn, sessionExpired, signOut } = useAuth();
+  const {
+    auth: legacyAuth,
+    signedIn: legacySignedIn,
+    sessionExpired: legacySessionExpired,
+    signOut: legacySignOut,
+  } = useLegacyAuth();
+  const {
+    isLoaded: insforgeLoaded,
+    isSignedIn: insforgeSignedIn,
+    signOut: insforgeSignOut,
+  } = useInsforgeAuth();
   const mockEnabled = isMockEnabled();
   const [latestVersion, setLatestVersion] = useState(null);
+  const [insforgeSession, setInsforgeSession] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -48,6 +63,55 @@ export default function App() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    if (!insforgeLoaded) return;
+    insforgeAuthClient.auth
+      .getCurrentSession()
+      .then(({ data }) => {
+        if (!active) return;
+        setInsforgeSession(data?.session ?? null);
+      })
+      .catch(() => {
+        if (!active) return;
+        setInsforgeSession(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [insforgeLoaded, insforgeSignedIn]);
+
+  useEffect(() => {
+    if (insforgeSession?.accessToken) {
+      clearSessionExpired();
+    }
+  }, [insforgeSession]);
+
+  const insforgeAuth = useMemo(() => {
+    if (!insforgeSession?.accessToken) return null;
+    const user = insforgeSession.user;
+    return {
+      accessToken: insforgeSession.accessToken,
+      userId: user?.id ?? null,
+      email: user?.email ?? null,
+      name: user?.name ?? null,
+      savedAt: new Date().toISOString(),
+    };
+  }, [insforgeSession]);
+
+  const useInsforge = Boolean(insforgeAuth?.accessToken);
+  const auth = useInsforge ? insforgeAuth : legacyAuth;
+  const signedIn = useInsforge ? true : legacySignedIn;
+  const sessionExpired = useInsforge ? false : legacySessionExpired;
+  const signOut = useMemo(() => {
+    return async () => {
+      if (useInsforge) {
+        await insforgeSignOut();
+      }
+      legacySignOut();
+    };
+  }, [insforgeSignOut, legacySignOut, useInsforge]);
 
   const pageUrl = new URL(window.location.href);
   const pathname = pageUrl.pathname.replace(/\/+$/, "");

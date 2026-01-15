@@ -73,6 +73,12 @@ test("App routes LandingPage when signed out", () => {
   );
 });
 
+test("App uses InsForge auth hook for signed-in gating", () => {
+  const src = read("dashboard/src/App.jsx");
+  assert.match(src, /@insforge\/react-router/);
+  assert.match(src, /useInsforgeAuth/);
+});
+
 test("DashboardPage shows session expired banner and bypasses auth gate", () => {
   const src = read("dashboard/src/pages/DashboardPage.jsx");
   assert.match(src, /sessionExpired/);
