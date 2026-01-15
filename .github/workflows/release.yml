@@ -63,8 +63,12 @@ jobs:
 
   npm-publish:
     runs-on: ubuntu-latest
-    needs: preflight
-    if: github.ref == 'refs/heads/main'
+    needs: [preflight, vercel-gate, mcp-confirmation]
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      needs.preflight.result == 'success' &&
+      (needs.vercel-gate.result == 'success' || needs.vercel-gate.result == 'skipped') &&
+      (needs.mcp-confirmation.result == 'success' || needs.mcp-confirmation.result == 'skipped')
     timeout-minutes: 10
     steps:
       - name: Checkout
@@ -136,7 +140,7 @@ jobs:
             while (Date.now() < deadline) {
               const response = await github.rest.checks.listForRef({ owner, repo, ref });
               const checks = response.data.check_runs.filter((check) =>
-                check.name && check.name.includes(targetName)
+                check.name === targetName
               );
 
               if (checks.length === 0) {
