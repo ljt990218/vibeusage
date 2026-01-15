@@ -79,6 +79,13 @@ test("App uses InsForge auth hook for signed-in gating", () => {
   assert.match(src, /useInsforgeAuth/);
 });
 
+test("App refreshes InsForge session periodically", () => {
+  const src = read("dashboard/src/App.jsx");
+  assert.match(src, /getCurrentSession/);
+  assert.match(src, /setInterval/);
+  assert.match(src, /INSFORGE_SESSION_REFRESH_MS/);
+});
+
 test("DashboardPage shows session expired banner and bypasses auth gate", () => {
   const src = read("dashboard/src/pages/DashboardPage.jsx");
   assert.match(src, /sessionExpired/);

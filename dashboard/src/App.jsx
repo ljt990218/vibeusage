@@ -21,6 +21,7 @@ const DashboardPage = React.lazy(() =>
 );
 
 const LOCAL_REDIRECT_HOSTS = new Set(["127.0.0.1", "localhost"]);
+const INSFORGE_SESSION_REFRESH_MS = 60 * 1000;
 
 function getSafeRedirect(searchParams) {
   const redirect = searchParams.get("redirect") || "";
@@ -65,20 +66,33 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    let active = true;
     if (!insforgeLoaded) return;
-    insforgeAuthClient.auth
-      .getCurrentSession()
-      .then(({ data }) => {
-        if (!active) return;
-        setInsforgeSession(data?.session ?? null);
-      })
-      .catch(() => {
-        if (!active) return;
-        setInsforgeSession(null);
-      });
+    let active = true;
+    let refreshTimer = null;
+    const refreshSession = () => {
+      return insforgeAuthClient.auth
+        .getCurrentSession()
+        .then(({ data }) => {
+          if (!active) return;
+          setInsforgeSession(data?.session ?? null);
+        })
+        .catch(() => {
+          if (!active) return;
+          setInsforgeSession(null);
+        });
+    };
+    refreshSession();
+    if (insforgeSignedIn) {
+      refreshTimer = window.setInterval(
+        refreshSession,
+        INSFORGE_SESSION_REFRESH_MS
+      );
+    }
     return () => {
       active = false;
+      if (refreshTimer) {
+        window.clearInterval(refreshTimer);
+      }
     };
   }, [insforgeLoaded, insforgeSignedIn]);
 
