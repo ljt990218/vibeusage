@@ -40,6 +40,14 @@ test("useAuth lists callback paths explicitly", () => {
   );
 });
 
+test("main wires InsForge hosted auth routes", () => {
+  const src = read("dashboard/src/main.jsx");
+  assert.match(src, /@insforge\/react-router/);
+  assert.match(src, /getInsforgeRoutes/);
+  assert.match(src, /afterSignInUrl/);
+  assert.match(src, /afterSignUpUrl/);
+});
+
 test("App routes LandingPage when signed out", () => {
   const src = read("dashboard/src/App.jsx");
   assert.match(src, /!signedIn\s*&&\s*!mockEnabled/);
