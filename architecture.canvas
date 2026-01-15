@@ -3779,6 +3779,22 @@
       }
     },
     {
+      "id": "note_auth-callback-paths_20260115",
+      "type": "text",
+      "text": "**auth-callback-paths**\n`dashboard/src/hooks/use-auth.js`\n\nRole: Accept callback paths.\nStatus: Implemented\nNotes: Parse access_token on /auth/callback and /callback, then replaceState('/').",
+      "x": 1900,
+      "y": 888,
+      "width": 280,
+      "height": 180,
+      "color": "5",
+      "meta": {
+        "relPath": "dashboard/src/hooks/use-auth.js",
+        "group": "misc",
+        "side": "left",
+        "layerIndex": 7
+      }
+    },
+    {
       "id": "undefined_use-backend-status_f6637b78",
       "type": "text",
       "text": "**use-backend-status**\n`dashboard/src/hooks/use-backend-status.js`\n\nGeneral module.\n\n包含：\n- use-backend-status (242 行)\n- useBackendStatus (7 个参数)\n\n依赖：0 个模块\n被依赖：1 次",
@@ -4244,6 +4260,13 @@
       "fromSide": "bottom",
       "toNode": "undefined_use-auth_94cf338d",
       "toSide": "top"
+    },
+    {
+      "id": "edge_note_auth-callback-paths_20260115_undefined_use-auth_94cf338d",
+      "fromNode": "note_auth-callback-paths_20260115",
+      "fromSide": "top",
+      "toNode": "undefined_use-auth_94cf338d",
+      "toSide": "bottom"
     },
     {
       "id": "edge_entry_App_50b6270d_utils_auth-url_f938f352",
