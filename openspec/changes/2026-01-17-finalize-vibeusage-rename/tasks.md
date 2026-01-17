@@ -39,7 +39,7 @@
 - [x] 8.1 Rename dashboard API module and update imports
 - [x] 8.2 Update storage keys and tests
 - [x] 8.3 Run dashboard tests
-- [ ] 8.4 Commit dashboard rename
+- [x] 8.4 Commit dashboard rename
 
 ## 9. Docs + scripts + smoke updates
 - [ ] 9.1 Update docs and scripts for `vibeusage` naming
