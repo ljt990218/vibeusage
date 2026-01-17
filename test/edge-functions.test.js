@@ -1,5 +1,7 @@
 const assert = require('node:assert/strict');
 const { createHash, webcrypto } = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
 const { test, beforeEach, afterEach } = require('node:test');
 
 if (!globalThis.crypto) {
@@ -33,6 +35,18 @@ function setDenoEnv(env) {
     }
   };
 }
+
+test('vibeusage function sources are not wrapper shims', () => {
+  const functionsDir = path.join(__dirname, '..', 'insforge-src', 'functions');
+  const entries = fs.readdirSync(functionsDir)
+    .filter((name) => name.startsWith('vibeusage-') && name.endsWith('.js'));
+  assert.ok(entries.length > 0, 'expected vibeusage function sources');
+  const wrapperPattern = /module\.exports\s*=\s*require\(['"]\.\/vibescore-/;
+  for (const entry of entries) {
+    const content = fs.readFileSync(path.join(functionsDir, entry), 'utf8');
+    assert.equal(wrapperPattern.test(content), false, `${entry} still wraps vibescore`);
+  }
+});
 
 function createServiceDbMock() {
   const inserts = [];
