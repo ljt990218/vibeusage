@@ -16,6 +16,9 @@
 - Command: `node --test test/build-insforge-functions-cleanup.test.js`
 - Result: PASS
 - Date: 2026-01-17
+- Command: `node scripts/build-insforge-functions.cjs`
+- Result: PASS
+- Date: 2026-01-17
 - Command: `node --test test/ops-scripts-vibeusage.test.js`
 - Result: PASS
 - Date: 2026-01-17
