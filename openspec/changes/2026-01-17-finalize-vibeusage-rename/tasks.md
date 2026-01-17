@@ -18,11 +18,11 @@
 - [x] 4.1 Rename CLI API module and update imports
 - [x] 4.2 Remove legacy bin alias
 - [x] 4.3 Update CLI tests and run focused tests
-- [ ] 4.4 Commit CLI rename
+- [x] 4.4 Commit CLI rename
 
 ## 5. Remove VIBESCORE env fallbacks (CLI + dashboard + shared)
-- [ ] 5.1 Update shared env readers and dashboard config
-- [ ] 5.2 Update tests and run focused tests
+- [x] 5.1 Update shared env readers and dashboard config
+- [x] 5.2 Update tests and run focused tests
 - [ ] 5.3 Commit env cleanup
 
 ## 6. Rename edge functions to vibeusage

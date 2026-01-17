@@ -22,9 +22,9 @@ const BILLABLE_RULE_VERSION = 1;
 
 const ingestGuard = createConcurrencyGuard({
   name: 'vibescore-ingest',
-  envKey: ['VIBEUSAGE_INGEST_MAX_INFLIGHT', 'VIBESCORE_INGEST_MAX_INFLIGHT'],
+  envKey: ['VIBEUSAGE_INGEST_MAX_INFLIGHT'],
   defaultMax: 0,
-  retryAfterEnvKey: ['VIBEUSAGE_INGEST_RETRY_AFTER_MS', 'VIBESCORE_INGEST_RETRY_AFTER_MS'],
+  retryAfterEnvKey: ['VIBEUSAGE_INGEST_RETRY_AFTER_MS'],
   defaultRetryAfterMs: 1000
 });
 

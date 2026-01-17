@@ -133,35 +133,27 @@ function createQueryMock({ rows = [], onFilter } = {}) {
 
 function withRollupEnabled(fn) {
   const prevNew = process.env.VIBEUSAGE_ROLLUP_ENABLED;
-  const prevLegacy = process.env.VIBESCORE_ROLLUP_ENABLED;
 
-  delete process.env.VIBEUSAGE_ROLLUP_ENABLED;
-  process.env.VIBESCORE_ROLLUP_ENABLED = '1';
+  process.env.VIBEUSAGE_ROLLUP_ENABLED = '1';
 
   return Promise.resolve()
     .then(fn)
     .finally(() => {
       if (prevNew === undefined) delete process.env.VIBEUSAGE_ROLLUP_ENABLED;
       else process.env.VIBEUSAGE_ROLLUP_ENABLED = prevNew;
-      if (prevLegacy === undefined) delete process.env.VIBESCORE_ROLLUP_ENABLED;
-      else process.env.VIBESCORE_ROLLUP_ENABLED = prevLegacy;
     });
 }
 
 function withRollupDisabled(fn) {
   const prevNew = process.env.VIBEUSAGE_ROLLUP_ENABLED;
-  const prevLegacy = process.env.VIBESCORE_ROLLUP_ENABLED;
 
   delete process.env.VIBEUSAGE_ROLLUP_ENABLED;
-  delete process.env.VIBESCORE_ROLLUP_ENABLED;
 
   return Promise.resolve()
     .then(fn)
     .finally(() => {
       if (prevNew === undefined) delete process.env.VIBEUSAGE_ROLLUP_ENABLED;
       else process.env.VIBEUSAGE_ROLLUP_ENABLED = prevNew;
-      if (prevLegacy === undefined) delete process.env.VIBESCORE_ROLLUP_ENABLED;
-      else process.env.VIBESCORE_ROLLUP_ENABLED = prevLegacy;
     });
 }
 

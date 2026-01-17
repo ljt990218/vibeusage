@@ -4,6 +4,27 @@
 - Command: `openspec validate 2026-01-17-finalize-vibeusage-rename --strict`
 - Result: PASS
 - Date: 2026-01-17
+- Command: `node --test test/insforge-src-shared.test.js`
+- Result: FAIL (expected; legacy env fallbacks not removed yet)
+- Date: 2026-01-17
+- Command: `node --test test/http-timeout.test.js`
+- Result: FAIL (expected; dashboard still reads VITE_VIBESCORE_HTTP_TIMEOUT_MS)
+- Date: 2026-01-17
+- Command: `node --test test/insforge-src-shared.test.js`
+- Result: PASS
+- Date: 2026-01-17
+- Command: `node --test test/http-timeout.test.js`
+- Result: PASS
+- Date: 2026-01-17
+- Command: `node --test test/insforge-client.test.js`
+- Result: PASS
+- Date: 2026-01-17
+- Command: `node --test test/runtime-config.test.js`
+- Result: PASS
+- Date: 2026-01-17
+- Command: `node --test test/edge-functions.test.js`
+- Result: PASS
+- Date: 2026-01-17
 - Command: `node --test test/no-vibescore-runtime.test.js`
 - Result: FAIL (expected; runtime still contains `vibescore` references)
 - Date: 2026-01-17
