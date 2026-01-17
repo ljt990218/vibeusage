@@ -12,12 +12,12 @@
 ## 3. Add runtime guard against `vibescore` references
 - [x] 3.1 Add `test/no-vibescore-runtime.test.js`
 - [ ] 3.2 Run `node --test test/no-vibescore-runtime.test.js` (expect fail then pass)
-- [ ] 3.3 Commit runtime guard
+- [x] 3.3 Commit runtime guard
 
 ## 4. CLI + local runtime rename to vibeusage endpoints
-- [ ] 4.1 Rename CLI API module and update imports
-- [ ] 4.2 Remove legacy bin alias
-- [ ] 4.3 Update CLI tests and run focused tests
+- [x] 4.1 Rename CLI API module and update imports
+- [x] 4.2 Remove legacy bin alias
+- [x] 4.3 Update CLI tests and run focused tests
 - [ ] 4.4 Commit CLI rename
 
 ## 5. Remove VIBESCORE env fallbacks (CLI + dashboard + shared)
