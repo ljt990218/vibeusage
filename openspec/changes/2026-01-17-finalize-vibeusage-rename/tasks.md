@@ -42,8 +42,8 @@
 - [x] 8.4 Commit dashboard rename
 
 ## 9. Docs + scripts + smoke updates
-- [ ] 9.1 Update docs and scripts for `vibeusage` naming
-- [ ] 9.2 Commit docs/scripts updates
+- [x] 9.1 Update docs and scripts for `vibeusage` naming
+- [x] 9.2 Commit docs/scripts updates
 
 ## 10. Verification + build + canvas sync
 - [ ] 10.1 Run full tests and insforge build checks
