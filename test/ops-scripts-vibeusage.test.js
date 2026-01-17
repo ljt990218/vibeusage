@@ -26,23 +26,37 @@ test("ops scripts surface supported env fallbacks in error messages", async () =
   const ingest = await read("scripts/ops/ingest-canary.cjs");
   const billable = await read("scripts/ops/billable-total-tokens-backfill.cjs");
 
-  const ingestMissingBaseUrl =
-    "Missing base URL: set VIBEUSAGE_CANARY_BASE_URL or VIBEUSAGE_INSFORGE_BASE_URL or INSFORGE_BASE_URL";
-  assert.ok(
-    ingest.includes(ingestMissingBaseUrl),
-    "expected ingest canary missing base URL message to mention INSFORGE_BASE_URL"
-  );
+  const ingestMissingMatch = ingest.match(/Missing base URL:[^\n]+/);
+  assert.ok(ingestMissingMatch, "expected ingest canary to include a missing base URL message");
+  const ingestMissingBaseUrl = ingestMissingMatch[0];
+  for (const envName of [
+    "VIBEUSAGE_CANARY_BASE_URL",
+    "VIBEUSAGE_INSFORGE_BASE_URL",
+    "INSFORGE_BASE_URL"
+  ]) {
+    assert.ok(
+      ingestMissingBaseUrl.includes(envName),
+      `expected ingest canary missing base URL message to mention ${envName}`
+    );
+  }
 
-  const billableMissingBaseUrl = "Missing base URL: set INSFORGE_BASE_URL or VIBEUSAGE_INSFORGE_BASE_URL";
-  assert.ok(
-    billable.includes(billableMissingBaseUrl),
-    "expected billable backfill missing base URL message to mention VIBEUSAGE_INSFORGE_BASE_URL"
-  );
+  const billableMissingBaseMatch = billable.match(/Missing base URL:[^\n]+/);
+  assert.ok(billableMissingBaseMatch, "expected billable backfill to include a missing base URL message");
+  const billableMissingBaseUrl = billableMissingBaseMatch[0];
+  for (const envName of ["INSFORGE_BASE_URL", "VIBEUSAGE_INSFORGE_BASE_URL"]) {
+    assert.ok(
+      billableMissingBaseUrl.includes(envName),
+      `expected billable backfill missing base URL message to mention ${envName}`
+    );
+  }
 
-  const billableMissingServiceRole =
-    "Missing service role key: set INSFORGE_SERVICE_ROLE_KEY or VIBEUSAGE_SERVICE_ROLE_KEY";
-  assert.ok(
-    billable.includes(billableMissingServiceRole),
-    "expected billable backfill missing service role message to mention VIBEUSAGE_SERVICE_ROLE_KEY"
-  );
+  const billableMissingRoleMatch = billable.match(/Missing service role key:[^\n]+/);
+  assert.ok(billableMissingRoleMatch, "expected billable backfill to include a missing service role message");
+  const billableMissingServiceRole = billableMissingRoleMatch[0];
+  for (const envName of ["INSFORGE_SERVICE_ROLE_KEY", "VIBEUSAGE_SERVICE_ROLE_KEY"]) {
+    assert.ok(
+      billableMissingServiceRole.includes(envName),
+      `expected billable backfill missing service role message to mention ${envName}`
+    );
+  }
 });
