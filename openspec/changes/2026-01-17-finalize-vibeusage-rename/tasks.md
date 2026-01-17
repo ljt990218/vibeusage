@@ -4,10 +4,10 @@
 - [x] 1.3 Commit OpenSpec scaffolding
 
 ## 2. Rename stable spec directory and references
-- [ ] 2.1 Rename `openspec/specs/vibescore-tracker` to `openspec/specs/vibeusage-tracker`
-- [ ] 2.2 Update references in `openspec/changes/**`, `docs/**`, and `openspec/project.md`
-- [ ] 2.3 Run `openspec validate 2026-01-17-finalize-vibeusage-rename --strict`
-- [ ] 2.4 Commit spec rename
+- [x] 2.1 Rename `openspec/specs/vibescore-tracker` to `openspec/specs/vibeusage-tracker`
+- [x] 2.2 Update references in `openspec/changes/**`, `docs/**`, and `openspec/project.md`
+- [x] 2.3 Run `openspec validate 2026-01-17-finalize-vibeusage-rename --strict`
+- [x] 2.4 Commit spec rename
 
 ## 3. Add runtime guard against `vibescore` references
 - [ ] 3.1 Add `test/no-vibescore-runtime.test.js`
