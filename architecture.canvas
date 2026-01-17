@@ -64,6 +64,16 @@
       "label": "test"
     },
     {
+      "id": "change_finalize_vibeusage_rename",
+      "type": "text",
+      "text": "**finalize-vibeusage-rename**\n`openspec/changes/2026-01-17-finalize-vibeusage-rename`\n\nRole: remove vibescore compatibility and rename to vibeusage.\nStatus: Proposed\nNotes: update CLI, dashboard, edge functions, DB objects, scripts, and docs.",
+      "x": 480,
+      "y": 7548,
+      "width": 360,
+      "height": 232,
+      "color": "5"
+    },
+    {
       "id": "frontend_copy_bf33508f",
       "type": "text",
       "text": "**copy**\n`copy.jsx`\n\nUI component layer.\n\n包含：\n- copy (526 行)\n- App (0 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
@@ -508,7 +518,7 @@
     {
       "id": "test_doctor_test_fe02ded2",
       "type": "text",
-      "text": "**doctor.test**\n`test/doctor.test.js`\n\nTest module.\n\n包含：\n- doctor.test (206 行)\n- createWriteCapture (0 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
+      "text": "**doctor.test**\n`test/doctor.test.js`\n\nTest module.\n\n包含：\n- doctor.test (241 行)\n- createWriteCapture (0 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
       "x": 2620,
       "y": 10852,
       "width": 280,
@@ -1323,7 +1333,7 @@
     {
       "id": "utils_diagnostics_91ea9e43",
       "type": "text",
-      "text": "**diagnostics**\n`src/lib/diagnostics.js`\n\nShared utilities.\n\nStatus: Implemented\nNotes: vibeusage-only tracker paths.\n\n包含：\n- diagnostics (191 行)\n- collectTrackerDiagnostics (1 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
+      "text": "**diagnostics**\n`src/lib/diagnostics.js`\n\nShared utilities.\n\n包含：\n- diagnostics (191 行)\n- collectTrackerDiagnostics (1 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
       "x": 100,
       "y": 8880,
       "width": 280,
@@ -1340,7 +1350,7 @@
     {
       "id": "utils_doctor_a3766196",
       "type": "text",
-      "text": "**doctor**\n`src/lib/doctor.js`\n\nShared utilities.\n\nStatus: Implemented\nNotes: expanded runtime checks.\n\n包含：\n- doctor (344 行)\n- buildDoctorReport (4 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
+      "text": "**doctor**\n`src/lib/doctor.js`\n\nShared utilities.\n\n包含：\n- doctor (344 行)\n- buildDoctorReport (4 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
       "x": 460,
       "y": 8880,
       "width": 280,
@@ -1544,7 +1554,7 @@
     {
       "id": "utils_tracker-paths_1d1f067c",
       "type": "text",
-      "text": "**tracker-paths**\n`src/lib/tracker-paths.js`\n\nShared utilities.\n\nStatus: Implemented\nNotes: vibeusage-only tracker paths.\n\n包含：\n- tracker-paths (16 行)\n- resolveTrackerPaths (1 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
+      "text": "**tracker-paths**\n`src/lib/tracker-paths.js`\n\nShared utilities.\n\n包含：\n- tracker-paths (16 行)\n- resolveTrackerPaths (1 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
       "x": 460,
       "y": 9600,
       "width": 280,
@@ -1628,7 +1638,7 @@
     {
       "id": "undefined_doctor_87cf7ea5",
       "type": "text",
-      "text": "**doctor**\n`src/commands/doctor.js`\n\nGeneral module.\n\nStatus: Implemented\nNotes: CLI base-url override.\n\n包含：\n- doctor (88 行)\n- cmdDoctor (1 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
+      "text": "**doctor**\n`src/commands/doctor.js`\n\nGeneral module.\n\n包含：\n- doctor (92 行)\n- cmdDoctor (1 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
       "x": 820,
       "y": 8160,
       "width": 280,
@@ -1644,7 +1654,7 @@
     {
       "id": "undefined_init_8ce62bde",
       "type": "text",
-      "text": "**init**\n`src/commands/init.js`\n\nGeneral module.\n\nStatus: Implemented\nNotes: no legacy tracker migration.\n\n包含：\n- init (768 行)\n- cmdInit (1 个参数)\n\n依赖：0 个模块\n被依赖：1 次",
+      "text": "**init**\n`src/commands/init.js`\n\nGeneral module.\n\n包含：\n- init (768 行)\n- cmdInit (1 个参数)\n\n依赖：0 个模块\n被依赖：1 次",
       "x": 1180,
       "y": 8160,
       "width": 280,
@@ -1660,7 +1670,7 @@
     {
       "id": "undefined_status_ed0fc630",
       "type": "text",
-      "text": "**status**\n`src/commands/status.js`\n\nGeneral module.\n\nStatus: Implemented\nNotes: no legacy tracker migration.\n\n包含：\n- status (156 行)\n- cmdStatus (1 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
+      "text": "**status**\n`src/commands/status.js`\n\nGeneral module.\n\n包含：\n- status (156 行)\n- cmdStatus (1 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
       "x": 1540,
       "y": 8160,
       "width": 280,
@@ -1676,7 +1686,7 @@
     {
       "id": "undefined_sync_324be1c3",
       "type": "text",
-      "text": "**sync**\n`src/commands/sync.js`\n\nGeneral module.\n\nStatus: Implemented\nNotes: no legacy tracker migration.\n\n包含：\n- sync (482 行)\n- cmdSync (1 个参数)\n\n依赖：0 个模块\n被依赖：1 次",
+      "text": "**sync**\n`src/commands/sync.js`\n\nGeneral module.\n\n包含：\n- sync (482 行)\n- cmdSync (1 个参数)\n\n依赖：0 个模块\n被依赖：1 次",
       "x": 1900,
       "y": 8160,
       "width": 280,
@@ -1692,7 +1702,7 @@
     {
       "id": "undefined_uninstall_d39cffde",
       "type": "text",
-      "text": "**uninstall**\n`src/commands/uninstall.js`\n\nGeneral module.\n\nStatus: Implemented\nNotes: purge vibeusage only.\n\n包含：\n- uninstall (150 行)\n- cmdUninstall (1 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
+      "text": "**uninstall**\n`src/commands/uninstall.js`\n\nGeneral module.\n\n包含：\n- uninstall (150 行)\n- cmdUninstall (1 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
       "x": 100,
       "y": 8520,
       "width": 280,

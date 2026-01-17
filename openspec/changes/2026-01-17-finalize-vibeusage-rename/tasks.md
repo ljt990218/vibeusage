@@ -1,7 +1,7 @@
 ## 1. OpenSpec change scaffolding + validation
 - [x] 1.1 Add proposal, acceptance criteria, test strategy, module brief, and spec delta
 - [x] 1.2 Run `openspec validate 2026-01-17-finalize-vibeusage-rename --strict`
-- [ ] 1.3 Commit OpenSpec scaffolding
+- [x] 1.3 Commit OpenSpec scaffolding
 
 ## 2. Rename stable spec directory and references
 - [ ] 2.1 Rename `openspec/specs/vibescore-tracker` to `openspec/specs/vibeusage-tracker`
