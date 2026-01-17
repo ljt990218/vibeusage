@@ -25,6 +25,9 @@
 - Command: `node --test test/no-vibescore-runtime.test.js`
 - Result: PASS
 - Date: 2026-01-17
+- Command: `insforge2 update-function (vibeusage-* x24 via MCP)`
+- Result: PASS
+- Date: 2026-01-17
 - Command: `node --test test/ops-scripts-vibeusage.test.js`
 - Result: PASS
 - Date: 2026-01-17

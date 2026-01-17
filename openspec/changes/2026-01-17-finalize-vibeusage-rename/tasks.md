@@ -53,9 +53,9 @@
 - [x] 10.5 Commit build + canvas sync
 
 ## 11. Deployment (MCP only)
-- [ ] 11.1 Deploy updated edge functions
-- [ ] 11.2 Record verification report
-- [ ] 11.3 Commit verification report
+- [x] 11.1 Deploy updated edge functions
+- [x] 11.2 Record verification report
+- [x] 11.3 Commit verification report
 
 ## 12. Post-implementation cleanup
 - [x] 12.1 Run `openspec validate --strict`
