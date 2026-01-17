@@ -4,6 +4,18 @@
 - Command: `openspec validate 2026-01-17-finalize-vibeusage-rename --strict`
 - Result: PASS
 - Date: 2026-01-17
+- Command: `node --test`
+- Result: PASS
+- Date: 2026-01-17
+- Command: `node scripts/build-insforge-functions.cjs`
+- Result: PASS
+- Date: 2026-01-17
+- Command: `node --test test/no-vibescore-runtime.test.js`
+- Result: PASS
+- Date: 2026-01-17
+- Command: `openspec validate 2026-01-17-finalize-vibeusage-rename --strict`
+- Result: PASS
+- Date: 2026-01-17
 - Command: `node --test test/vibeusage-docs-smoke-rename.test.js`
 - Result: FAIL (expected; docs/scripts still referenced vibescore)
 - Date: 2026-01-17
