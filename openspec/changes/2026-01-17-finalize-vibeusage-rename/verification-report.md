@@ -19,6 +19,12 @@
 - Command: `node scripts/build-insforge-functions.cjs`
 - Result: PASS
 - Date: 2026-01-17
+- Command: `openspec validate --strict`
+- Result: PASS
+- Date: 2026-01-17
+- Command: `node --test test/no-vibescore-runtime.test.js`
+- Result: PASS
+- Date: 2026-01-17
 - Command: `node --test test/ops-scripts-vibeusage.test.js`
 - Result: PASS
 - Date: 2026-01-17

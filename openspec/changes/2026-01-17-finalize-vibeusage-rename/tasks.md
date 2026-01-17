@@ -58,6 +58,6 @@
 - [ ] 11.3 Commit verification report
 
 ## 12. Post-implementation cleanup
-- [ ] 12.1 Run `openspec validate --strict`
-- [ ] 12.2 Confirm no `vibescore` runtime references remain
-- [ ] 12.3 Ensure working tree clean
+- [x] 12.1 Run `openspec validate --strict`
+- [x] 12.2 Confirm no `vibescore` runtime references remain
+- [x] 12.3 Ensure working tree clean
