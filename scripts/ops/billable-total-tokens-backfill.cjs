@@ -265,8 +265,12 @@ async function main() {
     process.env.VIBEUSAGE_SERVICE_ROLE_KEY ||
     '';
 
-  if (!baseUrl) throw new Error('Missing base URL: set INSFORGE_BASE_URL');
-  if (!serviceRoleKey) throw new Error('Missing service role key: set INSFORGE_SERVICE_ROLE_KEY');
+  if (!baseUrl) {
+    throw new Error('Missing base URL: set INSFORGE_BASE_URL or VIBEUSAGE_INSFORGE_BASE_URL');
+  }
+  if (!serviceRoleKey) {
+    throw new Error('Missing service role key: set INSFORGE_SERVICE_ROLE_KEY or VIBEUSAGE_SERVICE_ROLE_KEY');
+  }
 
   await runBackfill({
     from: opts.from,

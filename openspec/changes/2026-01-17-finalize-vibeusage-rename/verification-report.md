@@ -4,6 +4,12 @@
 - Command: `openspec validate 2026-01-17-finalize-vibeusage-rename --strict`
 - Result: PASS
 - Date: 2026-01-17
+- Command: `node --test test/ops-scripts-vibeusage.test.js`
+- Result: FAIL (expected; env message update pending)
+- Date: 2026-01-17
+- Command: `node --test test/ops-scripts-vibeusage.test.js`
+- Result: PASS
+- Date: 2026-01-17
 - Command: `node --test`
 - Result: PASS
 - Date: 2026-01-17
