@@ -14,6 +14,20 @@
 - Cold regression step:
 - Synthetic acceptance:
 
+## 2026-01-17-release-0.2.13
+- Date: 2026-01-17
+- Scope: CLI publish (vibeusage@0.2.13) + Release gate fix
+- Change ID: N/A (release)
+- CI workflow run: 21100397857
+- Release workflow run: 21100457971
+- Preflight: `node scripts/acceptance/model-identity-alias-table.cjs` (pass)
+- npm publish: vibeusage@0.2.13 (published)
+- Vercel check: skipped (no dashboard changes)
+- MCP deploy: skipped (no functions changes)
+- Freeze artifact: CLI package `vibeusage@0.2.13`
+- Cold regression step: `npm test` (pass)
+- Synthetic acceptance: `npx --yes vibeusage@0.2.13 --help` (pass)
+
 ## Runbook: Insforge MCP Deploy (Functions)
 1. Ensure `insforge-functions/` matches `insforge-src/functions/` (CI `build:insforge:check` or `npm run build:insforge`).
 2. Use Insforge MCP deployment flow to deploy updated functions.
