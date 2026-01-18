@@ -159,3 +159,65 @@ test("insforge2 db validate fails on non-2xx responses", async () => {
     `expected non-zero exit code, got ${result.code}\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`
   );
 });
+
+test("insforge2 db validate honors VIBEUSAGE_HTTP_TIMEOUT_MS", async () => {
+  let calls = 0;
+  const server = http.createServer((req, res) => {
+    if (req.method !== "POST" || req.url !== "/api/database/query") {
+      res.writeHead(404);
+      res.end();
+      return;
+    }
+    calls += 1;
+    setTimeout(() => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      if (calls === 1) {
+        res.end(
+          JSON.stringify({
+            rows: [
+              { proname: "vibeusage_request_headers" },
+              { proname: "vibeusage_request_header" },
+              { proname: "vibeusage_device_token_hash" }
+            ]
+          })
+        );
+        return;
+      }
+      res.end(JSON.stringify({ rows: [] }));
+    }, 200);
+  });
+
+  await new Promise((resolve) => server.listen(0, resolve));
+  const { port } = server.address();
+  const baseUrl = `http://127.0.0.1:${port}`;
+
+  const result = await new Promise((resolve) => {
+    const child = spawn(process.execPath, [path.join(repoRoot, "scripts/ops/insforge2-db-validate.cjs")], {
+      env: {
+        ...process.env,
+        VIBEUSAGE_INSFORGE_BASE_URL: baseUrl,
+        VIBEUSAGE_SERVICE_ROLE_KEY: "test-key",
+        VIBEUSAGE_HTTP_TIMEOUT_MS: "50"
+      }
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on("close", (code) => {
+      resolve({ code, stdout, stderr });
+    });
+  });
+
+  await new Promise((resolve) => server.close(resolve));
+
+  assert.notEqual(
+    result.code,
+    0,
+    `expected non-zero exit code, got ${result.code}\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`
+  );
+});

@@ -22,10 +22,15 @@ const baseUrl = requireEnv('VIBEUSAGE_INSFORGE_BASE_URL');
 const serviceKey = requireEnv('VIBEUSAGE_SERVICE_ROLE_KEY');
 const sqlPath = resolve(__dirname, 'insforge2-db-validate.sql');
 const sql = readFileSync(sqlPath, 'utf8');
+const timeoutMs = Number(process.env.VIBEUSAGE_HTTP_TIMEOUT_MS);
 
 function runSql(query) {
   const url = `${baseUrl.replace(/\/$/, '')}/api/database/query`;
   const payload = JSON.stringify({ query });
+  const maxTimeArgs =
+    Number.isFinite(timeoutMs) && timeoutMs > 0
+      ? ['--max-time', Math.max(timeoutMs / 1000, 0.001).toFixed(3)]
+      : [];
   let raw = '';
   try {
     raw = execFileSync(
@@ -38,6 +43,7 @@ function runSql(query) {
         `Authorization: Bearer ${serviceKey}`,
         '--data',
         payload,
+        ...maxTimeArgs,
         '--write-out',
         '\\n%{http_code}',
         url
