@@ -60,3 +60,13 @@ test("ops scripts surface supported env fallbacks in error messages", async () =
     );
   }
 });
+
+test("rename scripts update request header helpers", async () => {
+  const rename = await read("scripts/ops/rename-vibeusage-db.sql");
+  assert.ok(rename.includes("vibeusage_request_header"), "expected rename script to update request header helper");
+  assert.ok(rename.includes("vibeusage_device_token_hash"), "expected rename script to update device token helper");
+
+  const rollback = await read("scripts/ops/rename-vibeusage-db-rollback.sql");
+  assert.ok(rollback.includes("vibescore_request_header"), "expected rollback script to restore request header helper");
+  assert.ok(rollback.includes("vibescore_device_token_hash"), "expected rollback script to restore device token helper");
+});

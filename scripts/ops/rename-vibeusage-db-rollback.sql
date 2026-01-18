@@ -45,3 +45,20 @@ BEGIN
     EXECUTE format('ALTER POLICY %I ON %I.%I RENAME TO %I', r.policyname, r.schemaname, r.tablename, replace(r.policyname, old_prefix, new_prefix));
   END LOOP;
 END $$;
+
+-- Restore legacy request header helpers after rollback.
+create or replace function public.vibescore_request_header(name text)
+returns text
+language sql
+stable
+as $$
+  select public.vibescore_request_headers() ->> lower(name);
+$$;
+
+create or replace function public.vibescore_device_token_hash()
+returns text
+language sql
+stable
+as $$
+  select public.vibescore_request_header('x-vibescore-device-token-hash');
+$$;
