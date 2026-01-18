@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-const { execSync } = require('node:child_process');
+const { execFileSync } = require('node:child_process');
 const { readFileSync } = require('node:fs');
 const { resolve } = require('node:path');
 
@@ -24,20 +24,54 @@ const sqlPath = resolve(__dirname, 'insforge2-db-validate.sql');
 const sql = readFileSync(sqlPath, 'utf8');
 
 function runSql(query) {
-  const curl = [
-    'curl -sS',
-    "-H 'Content-Type: application/json'",
-    `-H 'Authorization: Bearer ${serviceKey}'`,
-    `--data '${JSON.stringify({ query })}'`,
-    `${baseUrl.replace(/\/$/, '')}/api/database/query`
-  ].join(' ');
-  const raw = execSync(curl, { stdio: ['ignore', 'pipe', 'pipe'] }).toString('utf8');
+  const url = `${baseUrl.replace(/\/$/, '')}/api/database/query`;
+  const payload = JSON.stringify({ query });
+  let raw = '';
   try {
-    return JSON.parse(raw);
+    raw = execFileSync(
+      'curl',
+      [
+        '-sS',
+        '-H',
+        'Content-Type: application/json',
+        '-H',
+        `Authorization: Bearer ${serviceKey}`,
+        '--data',
+        payload,
+        '--write-out',
+        '\\n%{http_code}',
+        url
+      ],
+      { encoding: 'utf8' }
+    );
+  } catch (error) {
+    const stderr = error?.stderr ? error.stderr.toString('utf8') : '';
+    const message = stderr.trim() || error.message || 'curl failed';
+    throw new Error(message);
+  }
+
+  const divider = raw.lastIndexOf('\n');
+  const body = divider === -1 ? raw : raw.slice(0, divider);
+  const statusText = divider === -1 ? '' : raw.slice(divider + 1).trim();
+  const status = Number(statusText);
+  if (!Number.isFinite(status) || status < 200 || status >= 300) {
+    const summary = body.trim() || 'empty response';
+    throw new Error(`HTTP ${status || 'unknown'}: ${summary}`);
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(body);
   } catch (_e) {
-    console.error(raw);
+    console.error(body);
     throw new Error('invalid JSON response');
   }
+
+  if (!Array.isArray(parsed?.rows)) {
+    throw new Error('invalid response: missing rows');
+  }
+
+  return parsed;
 }
 
 const sections = sql.split(/;\s*\n/).map((chunk) => chunk.trim()).filter(Boolean);
@@ -45,7 +79,14 @@ let failed = false;
 let index = 0;
 for (const query of sections) {
   index += 1;
-  const result = runSql(query);
+  let result;
+  try {
+    result = runSql(query);
+  } catch (error) {
+    console.error(`insforge2-db-validate failed on check #${index}`);
+    console.error(error?.message || String(error));
+    process.exit(1);
+  }
   const rows = Array.isArray(result?.rows) ? result.rows : [];
   if (index === 1) {
     const names = rows.map((row) => row.proname);
