@@ -45,7 +45,7 @@ jobs:
             --retry 3 \
             --retry-all-errors \
             --retry-delay 2 \
-            -X POST "$BASE_URL/functions/vibescore-pricing-sync" \
+            -X POST "$BASE_URL/functions/vibeusage-pricing-sync" \
             -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: application/json" \
             --data "$payload" \
