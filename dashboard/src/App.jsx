@@ -164,7 +164,7 @@ export default function App() {
 
   const loadingShell = <div className="min-h-screen bg-[#050505]" />;
   let content = null;
-  if (!publicMode && !signedIn && !mockEnabled) {
+  if (!publicMode && !signedIn && !mockEnabled && !sessionSoftExpired) {
     content = <LandingPage signInUrl={signInUrl} signUpUrl={signUpUrl} />;
   } else {
     content = (

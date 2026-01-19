@@ -58,7 +58,7 @@ test("App routes LandingPage when signed out", () => {
   const src = read("dashboard/src/App.jsx");
   assert.match(
     src,
-    /!publicMode\s*&&\s*!signedIn\s*&&\s*!mockEnabled/
+    /!publicMode\s*&&\s*!signedIn\s*&&\s*!mockEnabled\s*&&\s*!sessionSoftExpired/
   );
 });
 
