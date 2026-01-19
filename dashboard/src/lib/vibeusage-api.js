@@ -310,14 +310,13 @@ async function requestJson({
   skipSessionExpiry = false,
   allowRefresh = true,
 }) {
-  const resolvedAccessToken = await resolveAccessToken(accessToken);
-  const client = createInsforgeClient({
+  let activeAccessToken = await resolveAccessToken(accessToken);
+  let hadAccessToken = hasAccessTokenValue(activeAccessToken);
+  let http = createInsforgeClient({
     baseUrl,
-    accessToken: resolvedAccessToken,
-  });
-  const http = client.getHttpClient();
+    accessToken: activeAccessToken,
+  }).getHttpClient();
   const retryOptions = normalizeRetryOptions(retry, "GET");
-  const hadAccessToken = hasAccessTokenValue(resolvedAccessToken);
   const normalizedRequestKind = skipSessionExpiry ? REQUEST_KIND.probe : requestKind;
   let attempt = 0;
   const { primaryPath, fallbackPath } = buildFunctionPaths(slug);
@@ -333,7 +332,7 @@ async function requestJson({
       });
       clearSessionSoftExpiredIfNeeded({
         hadAccessToken,
-        accessToken: resolvedAccessToken,
+        accessToken: activeAccessToken,
       });
       return result;
     } catch (e) {
@@ -346,7 +345,7 @@ async function requestJson({
           status,
           requestKind: normalizedRequestKind,
           hadAccessToken,
-          accessToken: resolvedAccessToken,
+          accessToken: activeAccessToken,
         })
       ) {
         const refreshedSession = await refreshSessionOnce();
@@ -357,6 +356,9 @@ async function requestJson({
             accessToken: refreshedToken,
           });
           const retryHttp = retryClient.getHttpClient();
+          activeAccessToken = refreshedToken;
+          hadAccessToken = true;
+          http = retryHttp;
           try {
             const retryResult = await requestWithFallback({
               http: retryHttp,
@@ -392,7 +394,7 @@ async function requestJson({
         } else if (
           canSetSessionSoftExpired({
             hadAccessToken,
-            accessToken: resolvedAccessToken,
+            accessToken: activeAccessToken,
             skipSessionExpiry: normalizedRequestKind === REQUEST_KIND.probe,
           })
         ) {
@@ -401,14 +403,14 @@ async function requestJson({
         err ??= normalizeSdkError(e, {
           errorPrefix,
           hadAccessToken,
-          accessToken: resolvedAccessToken,
+          accessToken: activeAccessToken,
           skipSessionExpiry: true,
         });
       }
       err ??= normalizeSdkError(e, {
         errorPrefix,
         hadAccessToken,
-        accessToken: resolvedAccessToken,
+        accessToken: activeAccessToken,
         skipSessionExpiry: normalizedRequestKind === REQUEST_KIND.probe,
       });
       if (!shouldRetry({ err, attempt, retryOptions })) throw err;
@@ -431,14 +433,13 @@ async function requestPostJson({
   skipSessionExpiry = false,
   allowRefresh = true,
 }) {
-  const resolvedAccessToken = await resolveAccessToken(accessToken);
-  const client = createInsforgeClient({
+  let activeAccessToken = await resolveAccessToken(accessToken);
+  let hadAccessToken = hasAccessTokenValue(activeAccessToken);
+  let http = createInsforgeClient({
     baseUrl,
-    accessToken: resolvedAccessToken,
-  });
-  const http = client.getHttpClient();
+    accessToken: activeAccessToken,
+  }).getHttpClient();
   const retryOptions = normalizeRetryOptions(retry, "POST");
-  const hadAccessToken = hasAccessTokenValue(resolvedAccessToken);
   const normalizedRequestKind = skipSessionExpiry ? REQUEST_KIND.probe : requestKind;
   let attempt = 0;
   const { primaryPath, fallbackPath } = buildFunctionPaths(slug);
@@ -454,7 +455,7 @@ async function requestPostJson({
       });
       clearSessionSoftExpiredIfNeeded({
         hadAccessToken,
-        accessToken: resolvedAccessToken,
+        accessToken: activeAccessToken,
       });
       return result;
     } catch (e) {
@@ -467,7 +468,7 @@ async function requestPostJson({
           status,
           requestKind: normalizedRequestKind,
           hadAccessToken,
-          accessToken: resolvedAccessToken,
+          accessToken: activeAccessToken,
         })
       ) {
         const refreshedSession = await refreshSessionOnce();
@@ -478,6 +479,9 @@ async function requestPostJson({
             accessToken: refreshedToken,
           });
           const retryHttp = retryClient.getHttpClient();
+          activeAccessToken = refreshedToken;
+          hadAccessToken = true;
+          http = retryHttp;
           try {
             const retryResult = await requestWithFallbackPost({
               http: retryHttp,
@@ -513,7 +517,7 @@ async function requestPostJson({
         } else if (
           canSetSessionSoftExpired({
             hadAccessToken,
-            accessToken: resolvedAccessToken,
+            accessToken: activeAccessToken,
             skipSessionExpiry: normalizedRequestKind === REQUEST_KIND.probe,
           })
         ) {
@@ -522,14 +526,14 @@ async function requestPostJson({
         err ??= normalizeSdkError(e, {
           errorPrefix,
           hadAccessToken,
-          accessToken: resolvedAccessToken,
+          accessToken: activeAccessToken,
           skipSessionExpiry: true,
         });
       }
       err ??= normalizeSdkError(e, {
         errorPrefix,
         hadAccessToken,
-        accessToken: resolvedAccessToken,
+        accessToken: activeAccessToken,
         skipSessionExpiry: normalizedRequestKind === REQUEST_KIND.probe,
       });
       if (!shouldRetry({ err, attempt, retryOptions })) throw err;

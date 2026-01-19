@@ -194,6 +194,12 @@ test("vibeusage-api retries after refresh retry errors", () => {
   assert.doesNotMatch(src, /throw\s+normalizeSdkError\(\s*retryErr/);
 });
 
+test("vibeusage-api reuses refreshed http client for retries", () => {
+  const src = read("dashboard/src/lib/vibeusage-api.js");
+  const matches = src.match(/http\s*=\s*retryHttp/g) ?? [];
+  assert.strictEqual(matches.length, 2);
+});
+
 test("vibeusage-api only marks soft expired after refresh when token missing", () => {
   const src = read("dashboard/src/lib/vibeusage-api.js");
   assert.match(
