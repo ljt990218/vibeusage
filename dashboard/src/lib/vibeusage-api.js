@@ -338,6 +338,7 @@ async function requestJson({
       return result;
     } catch (e) {
       if (e?.name === "AbortError") throw e;
+      let err = null;
       const status = e?.statusCode ?? e?.status;
       if (
         allowRefresh &&
@@ -381,7 +382,7 @@ async function requestJson({
             ) {
               markSessionSoftExpired();
             }
-            throw normalizeSdkError(retryErr, {
+            err = normalizeSdkError(retryErr, {
               errorPrefix,
               hadAccessToken: true,
               accessToken: refreshedToken,
@@ -398,14 +399,14 @@ async function requestJson({
         ) {
           markSessionSoftExpired();
         }
-        throw normalizeSdkError(e, {
+        err ??= normalizeSdkError(e, {
           errorPrefix,
           hadAccessToken,
           accessToken: resolvedAccessToken,
           skipSessionExpiry: true,
         });
       }
-      const err = normalizeSdkError(e, {
+      err ??= normalizeSdkError(e, {
         errorPrefix,
         hadAccessToken,
         accessToken: resolvedAccessToken,
@@ -459,6 +460,7 @@ async function requestPostJson({
       return result;
     } catch (e) {
       if (e?.name === "AbortError") throw e;
+      let err = null;
       const status = e?.statusCode ?? e?.status;
       if (
         allowRefresh &&
@@ -502,7 +504,7 @@ async function requestPostJson({
             ) {
               markSessionSoftExpired();
             }
-            throw normalizeSdkError(retryErr, {
+            err = normalizeSdkError(retryErr, {
               errorPrefix,
               hadAccessToken: true,
               accessToken: refreshedToken,
@@ -519,14 +521,14 @@ async function requestPostJson({
         ) {
           markSessionSoftExpired();
         }
-        throw normalizeSdkError(e, {
+        err ??= normalizeSdkError(e, {
           errorPrefix,
           hadAccessToken,
           accessToken: resolvedAccessToken,
           skipSessionExpiry: true,
         });
       }
-      const err = normalizeSdkError(e, {
+      err ??= normalizeSdkError(e, {
         errorPrefix,
         hadAccessToken,
         accessToken: resolvedAccessToken,

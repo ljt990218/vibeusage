@@ -189,6 +189,11 @@ test("vibeusage-api clears session soft expired after successful jwt responses",
   assert.match(match[0], /canSetSessionSoftExpired/);
 });
 
+test("vibeusage-api retries after refresh retry errors", () => {
+  const src = read("dashboard/src/lib/vibeusage-api.js");
+  assert.doesNotMatch(src, /throw\s+normalizeSdkError\(\s*retryErr/);
+});
+
 test("copy registry includes session expired strings", () => {
   const src = read("dashboard/src/content/copy.csv");
   assert.ok(src.includes("dashboard.session_expired.title"));
