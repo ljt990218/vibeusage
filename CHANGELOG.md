@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.14] - 2026-01-19
+### Changed
+- Maintenance release; no CLI behavior changes.
+- Align scheduled ops workflows to vibeusage endpoints.
+
 ## [0.2.12] - 2026-01-09
 ### Changed
 - Default CLI dashboard URL now points to https://www.vibeusage.cc.
