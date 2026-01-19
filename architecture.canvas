@@ -338,7 +338,7 @@
     {
       "id": "test_dashboard-eslint-guardrails_test_fface5be",
       "type": "text",
-      "text": "**dashboard-eslint-guardrails.test**\n`test/dashboard-eslint-guardrails.test.js`\n\nTest module.\n\n包含：\n- dashboard-eslint-guardrails.test (56 行)\n- readDashboardPackage (0 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
+      "text": "**dashboard-eslint-guardrails.test**\n`test/dashboard-eslint-guardrails.test.js`\n\nTest module.\n\n包含：\n- dashboard-eslint-guardrails.test (60 行)\n- readDashboardPackage (0 个参数)\n\n依赖：0 个模块\n被依赖：0 次",
       "x": 2260,
       "y": 10132,
       "width": 280,

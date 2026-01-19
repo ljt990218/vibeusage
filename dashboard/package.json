@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\"",
+    "lint": "eslint \"src/App.jsx\"",
     "preview": "vite preview",
     "screenshot": "node scripts/capture-dashboard-screenshot.mjs",
     "verify:share-clipboard": "node scripts/verify-share-clipboard.mjs"

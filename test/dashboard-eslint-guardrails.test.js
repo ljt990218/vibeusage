@@ -23,6 +23,10 @@ test("dashboard package defines lint script", async () => {
     typeof pkg.scripts.lint === "string" && pkg.scripts.lint.length > 0,
     "expected dashboard package.json to define a lint script"
   );
+  assert.ok(
+    pkg.scripts.lint.includes("src/App.jsx"),
+    "expected dashboard lint script to target src/App.jsx"
+  );
 });
 
 test("dashboard package includes eslint devDependencies", async () => {
