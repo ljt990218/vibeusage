@@ -389,8 +389,7 @@ async function requestJson({
               skipSessionExpiry: true,
             });
           }
-        }
-        if (
+        } else if (
           canSetSessionSoftExpired({
             hadAccessToken,
             accessToken: resolvedAccessToken,
@@ -511,8 +510,7 @@ async function requestPostJson({
               skipSessionExpiry: true,
             });
           }
-        }
-        if (
+        } else if (
           canSetSessionSoftExpired({
             hadAccessToken,
             accessToken: resolvedAccessToken,

@@ -194,6 +194,14 @@ test("vibeusage-api retries after refresh retry errors", () => {
   assert.doesNotMatch(src, /throw\s+normalizeSdkError\(\s*retryErr/);
 });
 
+test("vibeusage-api only marks soft expired after refresh when token missing", () => {
+  const src = read("dashboard/src/lib/vibeusage-api.js");
+  assert.match(
+    src,
+    /if\s*\(\s*hasAccessTokenValue\(refreshedToken\)\s*\)[\s\S]*?\}\s*else if\s*\([\s\S]*canSetSessionSoftExpired[\s\S]*\)[\s\S]*markSessionSoftExpired/
+  );
+});
+
 test("copy registry includes session expired strings", () => {
   const src = read("dashboard/src/content/copy.csv");
   assert.ok(src.includes("dashboard.session_expired.title"));
